@@ -56,20 +56,30 @@ direct_message_mode: true
 # enable设置为true后，将会停止使用上面正常的官方API调用而使用本逆向项目
 #
 # 多账户可以保证每个请求都能得到及时的回复。
-# 关于account的格式
+
+
+# 关于account的格式，请你务必认真阅读以下格式。
+
+
+# account支持email+password、session_token、access_token多种方式登录。
+# 如果要使用session_token、access_token登录，直接添加新的一行（注意缩进！） - access_token: xxxxxxx即可
 # account:
+#   - session_token: xxxxxxxx
+#   - access_token: xxxxxxxx
 #   - email: 第1个账户
 #     password: 第1个账户密码
 #   - email: 第2个账户
 #     password: 第2个账户密码
 #   - ....
 # 请严格按照上面这个格式填写。
-# 这里我免费提供2个账号给大家，不过用的人一定会很多的，所以会造成一些bug，因此还是用自己的账号好一点。
+# 这里免费提供2个账号给大家，不过用的人一定会很多的，所以会造成一些bug，因此还是用自己的账号好一点。
 # 需要账号可以联系我。QQ905617992
 
 rev_ChatGPT:
   enable: false
   account:
+    - access_token: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Ik1UaEVOVUpHTkVNMVFURTRNMEZCTWpkQ05UZzVNRFUxUlRVd1FVSkRNRU13UmtGRVFrRXpSZyJ9.eyJodHRwczovL2FwaS5vcGVuYWkuY29tL3Byb2ZpbGUiOnsiZW1haWwiOiJkdWVsdG1wK3JzdG56QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJnZW9pcF9jb3VudHJ5IjoiU0cifSwiaHR0cHM6Ly9hcGkub3BlbmFpLmNvbS9hdXRoIjp7InVzZXJfaWQiOiJ1c2VyLURNUmhqWXc1N2JGWURiTXdPUWwyRWtTQiJ9LCJpc3MiOiJodHRwczovL2F1dGgwLm9wZW5haS5jb20vIiwic3ViIjoiYXV0aDB8NjNkODdiYjk4MWY4NDViYmU5NWFhMmU0IiwiYXVkIjpbImh0dHBzOi8vYXBpLm9wZW5haS5jb20vdjEiLCJodHRwczovL29wZW5haS5vcGVuYWkuYXV0aDBhcHAuY29tL3VzZXJpbmZvIl0sImlhdCI6MTY3NzgyNzk1NCwiZXhwIjoxNjc5MDM3NTU0LCJhenAiOiJUZEpJY2JlMTZXb1RIdE45NW55eXdoNUU0eU9vNkl0RyIsInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwgbW9kZWwucmVhZCBtb2RlbC5yZXF1ZXN0IG9yZ2FuaXphdGlvbi5yZWFkIG9mZmxpbmVfYWNjZXNzIn0.gpj7nLFYGmkKj3y0qcR2Ggrgi1fSbPdMA06uUeHNjG8Gw9cTxKxdyvl9LB80Xbua0wlsMoitXfthYck4f4Ok9s970ilPLvi77ZQKuqwoW1DvbQO_4NLpZhoerJYJDycjOD1O-FRkAA2Qi0tD7MJ-jwQ5hDwxdywm6o8BTqu6NU8fsGjmrYjURI8IeNYlOG61xuY9z0g_BELRkNcucD5tMeSqKbkdjEc2M_XUQwSPLqoWgbAlbvw3B7swzbDbIMo-Etyx7pCnDTRzf0iRkn_KwcTCOy3F_KYakDvr2N4wOwQxY0fOc8f8nXDpSaL_0eUbUQgxfZFqUZJ5QVuwPcbrsA
+    # - session_token: xxxxxxxx
     - email: d.o.m.her.ry61.7@gmail.com
       password: 11111111
     - email: ca.it.li.nal.o.i.si.o91@gmail.com
