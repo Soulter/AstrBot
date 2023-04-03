@@ -64,14 +64,6 @@ reply_prefix:
 
 ################外带程序（插件）################
 
-# 百度内容审核服务
-# 新用户免费5万次调用。https://cloud.baidu.com/doc/ANTIPORN/index.html
-baidu_aip:
-  enable: false
-  app_id: 
-  api_key: 
-  secret_key: 
-
 # 逆向文心一言【暂时不可用，请勿使用】
 rev_ernie:
   enable: false
