@@ -17,7 +17,6 @@ import util.unfit_words as uw
 import os
 import sys
 from cores.qqbot.personality import personalities
-from addons.baidu_aip_judge import BaiduJudge
 
 
 # QQBotClient实例
