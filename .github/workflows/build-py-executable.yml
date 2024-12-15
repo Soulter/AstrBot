@@ -1,0 +1,38 @@
+name: Build Python Executable
+
+on:
+  push:
+    branches:
+      - test
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install -r requirements.txt
+
+    - name: Build Executable with PyInstaller
+      run: |
+        pyinstaller --noconfirm --onefile --clean --name "AstrBot" main.py
+      env:
+        PYTHONHASHSEED: 0
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: built-executable
+        path: dist/AstrBot
