@@ -35,6 +35,3 @@ jobs:
         with:
           name: astrbot-windows-executable
           path: dist/astrbot-win64.exe
-      - name: Clean up
-        run: |
-          pyinstaller --clean
