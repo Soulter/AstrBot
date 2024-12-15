@@ -28,7 +28,7 @@ jobs:
 
       - name: Build Executable
         run: |
-          pyinstaller --noconfirm --onefile --clean main.py
+          pyinstaller --noconfirm --onefile --clean --name astrbot-win64 main.py
           
       - name: Upload Executable
         uses: actions/upload-artifact@v3
