@@ -105,6 +105,17 @@ CONFIG_METADATA_2 = {
                         "host": "localhost",
                         "port": 11451,
                     },
+                    "mispeaker(小爱音箱)": {
+                        "id": "mispeaker",
+                        "type": "mispeaker",
+                        "enable": False,
+                        "username": "",
+                        "password": "",
+                        "did": "",
+                        "activate_word": "测试",
+                        "deactivate_word": "停止",
+                        "interval": 1,
+                    },
                 },
                 "items": {
                     "id": {
