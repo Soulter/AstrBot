@@ -27,6 +27,8 @@ class PlatformManager():
                     from .sources.vchat.vchat_platform_adapter import VChatPlatformAdapter # noqa: F401
                 case "gewechat":
                     from .sources.gewechat.gewechat_platform_adapter import GewechatPlatformAdapter # noqa: F401
+                case "mispeaker":
+                    from .sources.mispeaker.mispeaker_adapter import MiSpeakerPlatformAdapter # noqa: F401
         
 
     async def initialize(self):
