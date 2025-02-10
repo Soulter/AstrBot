@@ -311,12 +311,14 @@ class SimpleGewechatClient():
             sp.put(f"gewechat-appid-{self.nickname}", appid)
             self.appid = appid
             logger.info(f"已保存 APPID: {appid}")
-    
-    async def post_text(self, to_wxid, content: str):
+
+    async def post_text(self, to_wxid, content: str, ats: str):
+        # 增加@入参
         payload = {
             "appId": self.appid,
             "toWxid": to_wxid,
             "content": content,
+            "ats": ats,
         }
         
         async with aiohttp.ClientSession() as session:
