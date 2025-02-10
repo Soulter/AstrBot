@@ -6,7 +6,7 @@ from astrbot.core.utils.tencent_record_helper import wav_to_tencent_silk
 from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, MessageChain
 from astrbot.api.platform import AstrBotMessage, PlatformMetadata
-from astrbot.api.message_components import Plain, Image, Record
+from astrbot.api.message_components import Plain, Image, Record, At
 from .client import SimpleGewechatClient
 
 def get_wav_duration(file_path):
@@ -42,10 +42,18 @@ class GewechatPlatformEvent(AstrMessageEvent):
         if not to_wxid:
             logger.error("无法获取到 to_wxid。")
             return
-        
+
+        # 获取发送者ID
+        ats = ""
+        for i in message.chain:
+            if isinstance(i, At):
+                ats = i.qq
+                break
+
         for comp in message.chain:
             if isinstance(comp, Plain):
-                await self.client.post_text(to_wxid, comp.text)
+                # 传入发送者ID
+                await self.client.post_text(to_wxid, comp.text, ats)
             elif isinstance(comp, Image):
                 img_url = comp.file
                 img_path = ""

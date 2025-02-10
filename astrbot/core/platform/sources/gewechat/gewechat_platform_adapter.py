@@ -9,7 +9,7 @@ from astrbot.core.platform.astr_message_event import MessageSesion
 from ...register import register_platform_adapter
 from .gewechat_event import GewechatPlatformEvent
 from .client import SimpleGewechatClient
-from astrbot.core.message.components import Plain
+from astrbot.core.message.components import Plain, At
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -37,10 +37,18 @@ class GewechatPlatformAdapter(Platform):
         if not to_wxid:
             logger.error("无法获取到 to_wxid。")
             return
-        
+
+        # 获取发送者ID
+        ats = ""
+        for i in message.chain:
+            if isinstance(i, At):
+                ats = i.qq
+                break
+
         for comp in message_chain.chain:
             if isinstance(comp, Plain):
-                await self.client.post_text(to_wxid, comp.text)
+                # 传入发送者ID
+                await self.client.post_text(to_wxid, comp.text, ats)
 
         await super().send_by_session(session, message_chain)
     

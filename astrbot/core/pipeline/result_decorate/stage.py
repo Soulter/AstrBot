@@ -113,7 +113,8 @@ class ResultDecorateStage:
             if self.reply_with_mention and event.get_message_type() != MessageType.FRIEND_MESSAGE:
                 result.chain.insert(0, At(qq=event.get_sender_id(), name=event.get_sender_name()))
                 if len(result.chain) > 1 and isinstance(result.chain[1], Plain):
-                    result.chain[1].text = "\n" + result.chain[1].text
+                    # 微信回复内容需要增加发送者
+                    result.chain[1].text = "@" + event.get_sender_name() + " \n" + result.chain[1].text
             
             # 引用回复
             if self.reply_with_quote:
