@@ -30,6 +30,8 @@ class PlatformManager():
                         logger.warning("当前 astrbot 已不维护 vchat 的接入，如有需要请 pip 安装 vchat 然后重启")
                 case "gewechat":
                     from .sources.gewechat.gewechat_platform_adapter import GewechatPlatformAdapter # noqa: F401
+                case "mispeaker":
+                    from .sources.mispeaker.mispeaker_adapter import MiSpeakerPlatformAdapter # noqa: F401
         
 
     async def initialize(self):

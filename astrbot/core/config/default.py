@@ -125,6 +125,17 @@ CONFIG_METADATA_2 = {
                         "host": "这里填写你的局域网IP或者公网服务器IP",
                         "port": 11451,
                     },
+                    "mispeaker(小爱音箱)": {
+                        "id": "mispeaker",
+                        "type": "mispeaker",
+                        "enable": False,
+                        "username": "",
+                        "password": "",
+                        "did": "",
+                        "activate_word": "测试",
+                        "deactivate_word": "停止",
+                        "interval": 1,
+                    },
                 },
                 "items": {
                     "id": {
