@@ -10,8 +10,9 @@ from ..star_handler import StarHandlerMetadata
 
 # 指令组受到 wake_prefix 的制约。
 class CommandGroupFilter(HandlerFilter):
-    def __init__(self, group_name: str):
+    def __init__(self, group_name: str, alias: set = None):
         self.group_name = group_name
+        self.alias = alias if alias else set()
         self.sub_command_filters: List[Union[CommandFilter, CommandGroupFilter]] = []
     
     def add_sub_command_filter(self, sub_command_filter: Union[CommandFilter, CommandGroupFilter]):
@@ -47,7 +48,7 @@ class CommandGroupFilter(HandlerFilter):
         
         ls = re.split(r"\s+", message_str)
         
-        if ls[0] != self.group_name:
+        if ls[0] != self.group_name and ls[0] not in self.alias:
             return False, None
         # 改写 message_str
         ls = ls[1:]
