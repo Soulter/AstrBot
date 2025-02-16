@@ -71,7 +71,6 @@ class CommandGroupFilter(HandlerFilter):
             message_str = event.get_message_str().strip()
         
         ls = re.split(r"\s+", message_str)
-        
         if ls[0] != self.group_name and ls[0] not in self.alias:
             return False, None
         # 改写 message_str

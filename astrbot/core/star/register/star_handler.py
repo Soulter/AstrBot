@@ -92,6 +92,17 @@ def register_command(
 
     return decorator
 
+<<<<<<<<< Temporary merge branch 1
+
+def register_command_group(
+    command_group_name: str = None,
+    sub_command: str = None,
+    alias: set = None,
+    **kwargs,
+):
+    """注册一个 CommandGroup"""
+
+=========
 def register_custom_filter(custom_type_filter, *args, **kwargs):
     '''注册一个自定义的 CustomFilter
 
@@ -147,10 +158,54 @@ def register_custom_filter(custom_type_filter, *args, **kwargs):
         return awaitable
     return decorator
 
-def register_command_group(command_group_name: str = None, sub_command = None, alias:set = None, **kwargs):
-    '''注册一个 CommandGroup
-    '''
-    
+
+def register_command(
+    command_name: str = None,
+    sub_command: str = None,
+    alias: set = None,
+    **kwargs,
+):
+    """注册一个 Command."""
+
+    # print("command: ", command_name, args, kwargs)
+
+    new_command = None
+    add_to_event_filters = False
+    if isinstance(command_name, RegisteringCommandable):
+        # 子指令
+        new_command = CommandFilter(sub_command, alias, None)
+        command_name.parent_group.add_sub_command_filter(new_command)
+    else:
+        # 裸指令
+        new_command = CommandFilter(command_name, alias, None)
+        add_to_event_filters = True
+
+    def decorator(awaitable):
+        if not add_to_event_filters:
+            kwargs["sub_command"] = (
+                True  # 打一个标记，表示这是一个子指令，再 wakingstage 阶段这个 handler 将会直接被跳过（其父指令会接管）
+            )
+        handler_md = get_handler_or_create(
+            awaitable, EventType.AdapterMessageEvent, **kwargs
+        )
+        new_command.init_handler_md(handler_md)
+        if add_to_event_filters:
+            # 裸指令
+            handler_md.event_filters.append(new_command)
+
+        return awaitable
+
+    return decorator
+
+
+def register_command_group(
+    command_group_name: str = None,
+    sub_command: str = None,
+    alias: set = None,
+    **kwargs,
+):
+    """注册一个 CommandGroup"""
+
     # print("commandgroup: ", command_group_name,args,  kwargs)
 
     new_group = None
@@ -171,15 +226,15 @@ def register_command_group(command_group_name: str = None, sub_command = None, a
                 obj, EventType.AdapterMessageEvent, **kwargs
             )
             handler_md.event_filters.append(new_group)
-
         return RegisteringCommandable(new_group)
 
     return decorator
 
-class RegisteringCommandable():
-    '''用于指令组级联注册'''
-    group = register_command_group
-    command = register_command
+class RegisteringCommandable:
+    """用于指令组级联注册"""
+
+    group: RegisteringCommandable = register_command_group
+    command: Callable = register_command
     custom_filter = register_custom_filter
 
     def __init__(self, parent_group: CommandGroupFilter):
