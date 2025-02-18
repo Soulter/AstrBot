@@ -7,6 +7,7 @@ configs/session
 configs/config.yaml
 **/.DS_Store
 temp
+tmp
 cmd_config.json
 data
 cookies.json
