@@ -5,41 +5,41 @@ class DownloadApi:
         self.base_url = base_url
         self.token = token
 
-    def download_image(self, app_id, xml, type):
+    async def download_image(self, app_id, xml, type):
         """下载图片"""
         param = {
             "appId": app_id,
             "xml": xml,
             "type": type
         }
-        return post_json(self.base_url, "/message/downloadImage", self.token, param)
+        return await post_json(self.base_url, "/message/downloadImage", self.token, param)
 
-    def download_voice(self, app_id, xml, msg_id):
+    async def download_voice(self, app_id, xml, msg_id):
         """下载语音"""
         param = {
             "appId": app_id,
             "xml": xml,
             "msgId": msg_id
         }
-        return post_json(self.base_url, "/message/downloadVoice", self.token, param)
+        return await post_json(self.base_url, "/message/downloadVoice", self.token, param)
 
-    def download_video(self, app_id, xml):
+    async def download_video(self, app_id, xml):
         """下载视频"""
         param = {
             "appId": app_id,
             "xml": xml
         }
-        return post_json(self.base_url, "/message/downloadVideo", self.token, param)
+        return await post_json(self.base_url, "/message/downloadVideo", self.token, param)
 
-    def download_emoji_md5(self, app_id, emoji_md5):
+    async def download_emoji_md5(self, app_id, emoji_md5):
         """下载emoji"""
         param = {
             "appId": app_id,
             "emojiMd5": emoji_md5
         }
-        return post_json(self.base_url, "/message/downloadEmojiMd5", self.token, param)
+        return await post_json(self.base_url, "/message/downloadEmojiMd5", self.token, param)
 
-    def download_cdn(self, app_id, aes_key, file_id, type, total_size, suffix):
+    async def download_cdn(self, app_id, aes_key, file_id, type, total_size, suffix):
         """cdn下载"""
         param = {
             "appId": app_id,
@@ -49,4 +49,4 @@ class DownloadApi:
             "type": type,
             "suffix": suffix
         }
-        return post_json(self.base_url, "/message/downloadCdn", self.token, param)
+        return await post_json(self.base_url, "/message/downloadCdn", self.token, param)

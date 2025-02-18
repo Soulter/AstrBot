@@ -8,7 +8,7 @@ from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, MessageChain
 from astrbot.api.platform import AstrBotMessage, PlatformMetadata
 from astrbot.api.message_components import Plain, Image, Record, At, File
-from .client import SimpleGewechatClient
+from .client import GewechatClient
 
 def get_wav_duration(file_path):
     with wave.open(file_path, 'rb') as wav_file:
@@ -29,7 +29,7 @@ class GewechatPlatformEvent(AstrMessageEvent):
             message_obj: AstrBotMessage, 
             platform_meta: PlatformMetadata, 
             session_id: str,
-            client: SimpleGewechatClient
+            client: GewechatClient
         ):
         super().__init__(message_str, message_obj, platform_meta, session_id)
         self.client = client

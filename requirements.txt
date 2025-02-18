@@ -21,3 +21,4 @@ silk-python
 lark-oapi
 ormsgpack
 cryptography
+qrcodes

@@ -1,5 +1,6 @@
 import threading
 import asyncio
+import aiohttp
 import quart
 import base64
 import datetime
@@ -19,10 +20,12 @@ from .api.message_api import MessageApi
 from .api.personal_api import PersonalApi
 
 
-class SimpleGewechatClient():
-    '''针对 Gewechat 的简单实现。
+class GewechatClient():
+    '''对接 Gewechat 的接口。
     
     @author: Soulter
+    @modified: diudiu62
+    @date: 2025-02-18 14:56:30
     @website: https://github.com/Soulter
     '''
     def __init__(self, base_url: str, nickname: str, host: str, port: int, event_queue: asyncio.Queue):
@@ -74,10 +77,13 @@ class SimpleGewechatClient():
         """获取tokenId"""
         self._login_api = LoginApi(self.base_url, self.token)
 
-        json_blob = self._login_api.get_token()
+        json_blob = await self._login_api.get_token()
         self.token = json_blob['data']
         logger.info(f"获取到 Gewechat Token: {self.token}")
-
+        self.headers = {
+                    "X-GEWE-TOKEN": self.token
+                }
+        
         self._contact_api = ContactApi(self.base_url, self.token)
         self._download_api = DownloadApi(self.base_url, self.token)
         self._favor_api = FavorApi(self.base_url, self.token)
@@ -242,213 +248,213 @@ class SimpleGewechatClient():
 
     async def fetch_contacts_list(self):
         """获取通讯录列表"""
-        return self._contact_api.fetch_contacts_list(self.appid)
+        return await self._contact_api.fetch_contacts_list(self.appid)
 
     async def get_brief_info(self, wxids):
         """获取群/好友简要信息"""
-        return self._contact_api.get_brief_info(self.appid, wxids)
+        return await self._contact_api.get_brief_info(self.appid, wxids)
 
     async def get_detail_info(self, wxids):
         """获取群/好友详细信息"""
-        return self._contact_api.get_detail_info(self.appid, wxids)
+        return await self._contact_api.get_detail_info(self.appid, wxids)
 
     async def search_contacts(self, contacts_info):
         """搜索好友"""
-        return self._contact_api.search(self.appid, contacts_info)
+        return await self._contact_api.search(self.appid, contacts_info)
 
     async def add_contacts(self, scene, option, v3, v4, content):
         """添加联系人/同意添加好友"""
-        return self._contact_api.add_contacts(self.appid, scene, option, v3, v4, content)
+        return await self._contact_api.add_contacts(self.appid, scene, option, v3, v4, content)
 
     async def delete_friend(self, wxid):
         """删除好友"""
-        return self._contact_api.delete_friend(self.appid, wxid)
+        return await self._contact_api.delete_friend(self.appid, wxid)
 
     async def set_friend_permissions(self, wxid, only_chat):
         """设置好友仅聊天"""
-        return self._contact_api.set_friend_permissions(self.appid, wxid, only_chat)
+        return await self._contact_api.set_friend_permissions(self.appid, wxid, only_chat)
 
     async def set_friend_remark(self, wxid, remark):
         """设置好友备注"""
-        return self._contact_api.set_friend_remark(self.appid, wxid, remark)
+        return await self._contact_api.set_friend_remark(self.appid, wxid, remark)
 
     async def get_phone_address_list(self, phones):
         """获取手机通讯录"""
-        return self._contact_api.get_phone_address_list(self.appid, phones)
+        return await self._contact_api.get_phone_address_list(self.appid, phones)
 
     async def upload_phone_address_list(self, phones, op_type):
         """上传手机通讯录"""
-        return self._contact_api.upload_phone_address_list(self.appid, phones, op_type)
+        return await self._contact_api.upload_phone_address_list(self.appid, phones, op_type)
 
     async def sync_favor(self, sync_key):
         """同步收藏夹"""
-        return self._favor_api.sync(self.appid, sync_key)
+        return await self._favor_api.sync(self.appid, sync_key)
     
     async def get_favor_content(self, fav_id):
         """获取收藏夹"""
-        return self._favor_api.get_content(self.appid, fav_id)
+        return await self._favor_api.get_content(self.appid, fav_id)
 
     async def delete_favor(self, fav_id):
         """删除收藏夹"""
-        return self._favor_api.delete(self.appid, fav_id)
+        return await self._favor_api.delete(self.appid, fav_id)
 
     async def download_image(self, xml, type):
         """下载图片"""
-        return self._download_api.download_image(self.appid, xml, type)
+        return await self._download_api.download_image(self.appid, xml, type)
 
     async def download_voice(self, xml, msg_id):
         """下载语音"""
-        return self._download_api.download_voice(self.appid, xml, msg_id)
+        return await self._download_api.download_voice(self.appid, xml, msg_id)
 
     async def download_video(self, xml):
         """下载视频"""
-        return self._download_api.download_video(self.appid, xml)
+        return await self._download_api.download_video(self.appid, xml)
 
     async def download_emoji_md5(self, emoji_md5):
         """下载emoji"""
-        return self._download_api.download_emoji_md5(self.appid, emoji_md5)
+        return await self._download_api.download_emoji_md5(self.appid, emoji_md5)
 
     async def download_cdn(self, aes_key, file_id, type, total_size, suffix):
         """cdn下载"""
-        return self._download_api.download_cdn(self.appid, aes_key, file_id, type, total_size, suffix)
+        return await self._download_api.download_cdn(self.appid, aes_key, file_id, type, total_size, suffix)
 
     # Group API methods
     async def create_chatroom(self, wxids):
         """创建微信群"""
-        return self._group_api.create_chatroom(self.appid, wxids)
+        return await self._group_api.create_chatroom(self.appid, wxids)
 
     async def modify_chatroom_name(self, chatroom_name, chatroom_id):
         """修改群名称"""
-        return self._group_api.modify_chatroom_name(self.appid, chatroom_name, chatroom_id)
+        return await self._group_api.modify_chatroom_name(self.appid, chatroom_name, chatroom_id)
 
     async def modify_chatroom_remark(self, chatroom_remark, chatroom_id):
         """修改群备注"""
-        return self._group_api.modify_chatroom_remark(self.appid, chatroom_remark, chatroom_id)
+        return await self._group_api.modify_chatroom_remark(self.appid, chatroom_remark, chatroom_id)
 
     async def modify_chatroom_nickname_for_self(self, nick_name, chatroom_id):
         """修改我在群内的昵称"""
-        return self._group_api.modify_chatroom_nickname_for_self(self.appid, nick_name, chatroom_id)
+        return await self._group_api.modify_chatroom_nickname_for_self(self.appid, nick_name, chatroom_id)
 
     async def invite_member(self, wxids, chatroom_id, reason):
         """邀请/添加 进群"""
-        return self._group_api.invite_member(self.appid, wxids, chatroom_id, reason)
+        return await self._group_api.invite_member(self.appid, wxids, chatroom_id, reason)
 
     async def remove_member(self, wxids, chatroom_id):
         """删除群成员"""
-        return self._group_api.remove_member(self.appid, wxids, chatroom_id)
+        return await self._group_api.remove_member(self.appid, wxids, chatroom_id)
 
     async def quit_chatroom(self, chatroom_id):
         """退出群聊"""
-        return self._group_api.quit_chatroom(self.appid, chatroom_id)
+        return await self._group_api.quit_chatroom(self.appid, chatroom_id)
 
     async def disband_chatroom(self, chatroom_id):
         """解散群聊"""
-        return self._group_api.disband_chatroom(self.appid, chatroom_id)
+        return await self._group_api.disband_chatroom(self.appid, chatroom_id)
 
     async def get_chatroom_info(self, chatroom_id):
         """获取群信息"""
-        return self._group_api.get_chatroom_info(self.appid, chatroom_id)
+        return await self._group_api.get_chatroom_info(self.appid, chatroom_id)
 
     async def get_chatroom_member_list(self, chatroom_id):
         """获取群成员列表"""
-        return self._group_api.get_chatroom_member_list(self.appid, chatroom_id)
+        return await self._group_api.get_chatroom_member_list(self.appid, chatroom_id)
 
     async def get_chatroom_member_detail(self, chatroom_id, member_wxids):
         """获取群成员详情"""
-        return self._group_api.get_chatroom_member_detail(self.appid, chatroom_id, member_wxids)
+        return await self._group_api.get_chatroom_member_detail(self.appid, chatroom_id, member_wxids)
 
     async def get_chatroom_announcement(self, chatroom_id):
         """获取群公告"""
-        return self._group_api.get_chatroom_announcement(self.appid, chatroom_id)
+        return await self._group_api.get_chatroom_announcement(self.appid, chatroom_id)
 
     async def set_chatroom_announcement(self, chatroom_id, content):
         """设置群公告"""
-        return self._group_api.set_chatroom_announcement(self.appid, chatroom_id, content)
+        return await self._group_api.set_chatroom_announcement(self.appid, chatroom_id, content)
 
     async def agree_join_room(self, url):
         """同意进群"""
-        return self._group_api.agree_join_room(self.appid, url)
+        return await self._group_api.agree_join_room(self.appid, url)
 
     async def add_group_member_as_friend(self, member_wxid, chatroom_id, content):
         """添加群成员为好友"""
-        return self._group_api.add_group_member_as_friend(self.appid, member_wxid, chatroom_id, content)
+        return await self._group_api.add_group_member_as_friend(self.appid, member_wxid, chatroom_id, content)
 
     async def get_chatroom_qr_code(self, chatroom_id):
         """获取群二维码"""
-        return self._group_api.get_chatroom_qr_code(self.appid, chatroom_id)
+        return await self._group_api.get_chatroom_qr_code(self.appid, chatroom_id)
 
     async def save_contract_list(self, oper_type, chatroom_id):
         """群保存到通讯录或从通讯录移除"""
-        return self._group_api.save_contract_list(self.appid, oper_type, chatroom_id)
+        return await self._group_api.save_contract_list(self.appid, oper_type, chatroom_id)
 
     async def admin_operate(self, chatroom_id, wxids, oper_type):
         """管理员操作"""
-        return self._group_api.admin_operate(self.appid, chatroom_id, wxids, oper_type)
+        return await self._group_api.admin_operate(self.appid, chatroom_id, wxids, oper_type)
 
     async def pin_chat(self, top, chatroom_id):
         """聊天置顶"""
-        return self._group_api.pin_chat(self.appid, top, chatroom_id)
+        return await self._group_api.pin_chat(self.appid, top, chatroom_id)
 
     async def set_msg_silence(self, silence, chatroom_id):
         """设置消息免打扰"""
-        return self._group_api.set_msg_silence(self.appid, silence, chatroom_id)
+        return await self._group_api.set_msg_silence(self.appid, silence, chatroom_id)
 
     async def join_room_using_qr_code(self, qr_url):
         """扫码进群"""
-        return self._group_api.join_room_using_qr_code(self.appid, qr_url)
+        return await self._group_api.join_room_using_qr_code(self.appid, qr_url)
 
     async def room_access_apply_check_approve(self, new_msg_id, chatroom_id, msg_content):
         """确认进群申请"""
-        return self._group_api.room_access_apply_check_approve(self.appid, new_msg_id, chatroom_id, msg_content)
+        return await self._group_api.room_access_apply_check_approve(self.appid, new_msg_id, chatroom_id, msg_content)
 
     # Label API methods
     async def add_label(self, label_name):
         """添加标签"""
-        return self._label_api.add(self.appid, label_name)
+        return await self._label_api.add(self.appid, label_name)
 
     async def delete_label(self, label_ids):
         """删除标签"""
-        return self._label_api.delete(self.appid, label_ids)
+        return await self._label_api.delete(self.appid, label_ids)
 
     async def list_labels(self):
         """获取标签列表"""
-        return self._label_api.list(self.appid)
+        return await self._label_api.list(self.appid)
 
     async def modify_label_member_list(self, label_ids, wx_ids):
         """修改标签成员列表"""
-        return self._label_api.modify_member_list(self.appid, label_ids, wx_ids)
+        return await self._label_api.modify_member_list(self.appid, label_ids, wx_ids)
 
     # Personal API methods
     async def get_profile(self):
         """获取个人资料"""
-        return self._personal_api.get_profile(self.appid)
+        return await self._personal_api.get_profile(self.appid)
 
     async def get_qr_code(self):
         """获取自己的二维码"""
-        return self._personal_api.get_qr_code(self.appid)
+        return await self._personal_api.get_qr_code(self.appid)
 
     async def get_safety_info(self):
         """获取设备记录"""
-        return self._personal_api.get_safety_info(self.appid)
+        return await self._personal_api.get_safety_info(self.appid)
 
     async def privacy_settings(self, option, open):
         """隐私设置"""
-        return self._personal_api.privacy_settings(self.appid, option, open)
+        return await self._personal_api.privacy_settings(self.appid, option, open)
 
     async def update_profile(self, city, country, nick_name, province, sex, signature):
         """修改个人信息"""
-        return self._personal_api.update_profile(self.appid, city, country, nick_name, province, sex, signature)
+        return await self._personal_api.update_profile(self.appid, city, country, nick_name, province, sex, signature)
 
     async def update_head_img(self, head_img_url):
         """修改头像"""
-        return self._personal_api.update_head_img(self.appid, head_img_url)
+        return await self._personal_api.update_head_img(self.appid, head_img_url)
 
     # Login API methods
     async def login(self):
         """登录"""
         if self.token is None:
             await self.get_token_id()
-        appid = self._login_api.login(self.appid)
+        appid = await self._login_api.login(self.appid)
         if appid:
             sp.put(f"gewechat-appid-{self.nickname}", appid)
             self.appid = appid
@@ -457,97 +463,97 @@ class SimpleGewechatClient():
 
     async def get_token(self):
         """获取tokenId"""
-        return self._login_api.get_token()
+        return await self._login_api.get_token()
 
     async def _set_callback_url(self):
         """设置微信消息的回调地址"""
-        return self._login_api.set_callback(self.token, self.callback_url)
+        return await self._login_api.set_callback(self.token, self.callback_url)
 
     async def get_qr(self):
         """获取登录二维码"""
-        return self._login_api.get_qr(self.appid)
+        return await self._login_api.get_qr(self.appid)
 
     async def check_qr(self, uuid, captch_code):
         """确认登陆"""
-        return self._login_api.check_qr(self.appid, uuid, captch_code)
+        return await self._login_api.check_qr(self.appid, uuid, captch_code)
 
     async def log_out(self):
         """退出微信"""
-        return self._login_api.log_out(self.appid)
+        return await self._login_api.log_out(self.appid)
 
     async def dialog_login(self):
         """弹框登录"""
-        return self._login_api.dialog_login(self.appid)
+        return await self._login_api.dialog_login(self.appid)
 
     async def check_online(self):
         """检查是否在线"""
-        return self._login_api.check_online(self.appid)
+        return await self._login_api.check_online(self.appid)
 
     async def logout(self):
         """退出"""
-        return self._login_api.logout(self.appid)
+        return await self._login_api.logout(self.appid)
 
     # Message API methods
     async def post_text(self, to_wxid, content, ats: str = ""):
         """发送文字消息"""
-        return self._message_api.post_text(self.appid, to_wxid, content, ats)
+        return await self._message_api.post_text(self.appid, to_wxid, content, ats)
 
     async def post_file(self, to_wxid, file_url, file_name):
         """发送文件消息"""
-        return self._message_api.post_file(self.appid, to_wxid, file_url, file_name)
+        return await self._message_api.post_file(self.appid, to_wxid, file_url, file_name)
 
     async def post_image(self, to_wxid, img_url):
         """发送图片消息"""
-        return self._message_api.post_image(self.appid, to_wxid, img_url)
+        return await self._message_api.post_image(self.appid, to_wxid, img_url)
 
     async def post_voice(self, to_wxid, voice_url, voice_duration):
         """发送语音消息"""
-        return self._message_api.post_voice(self.appid, to_wxid, voice_url, voice_duration)
+        return await self._message_api.post_voice(self.appid, to_wxid, voice_url, voice_duration)
 
     async def post_video(self, to_wxid, video_url, thumb_url, video_duration):
         """发送视频消息"""
-        return self._message_api.post_video(self.appid, to_wxid, video_url, thumb_url, video_duration)
+        return await self._message_api.post_video(self.appid, to_wxid, video_url, thumb_url, video_duration)
 
     async def post_link(self, to_wxid, title, desc, link_url, thumb_url):
         """发送链接消息"""
-        return self._message_api.post_link(self.appid, to_wxid, title, desc, link_url, thumb_url)
+        return await self._message_api.post_link(self.appid, to_wxid, title, desc, link_url, thumb_url)
 
     async def post_name_card(self, to_wxid, nick_name, name_card_wxid):
         """发送名片消息"""
-        return self._message_api.post_name_card(self.appid, to_wxid, nick_name, name_card_wxid)
+        return await self._message_api.post_name_card(self.appid, to_wxid, nick_name, name_card_wxid)
 
     async def post_emoji(self, to_wxid, emoji_md5, emoji_size):
         """发送emoji消息"""
-        return self._message_api.post_emoji(self.appid, to_wxid, emoji_md5, emoji_size)
+        return await self._message_api.post_emoji(self.appid, to_wxid, emoji_md5, emoji_size)
 
     async def post_app_msg(self, to_wxid, appmsg):
         """发送appmsg消息"""
-        return self._message_api.post_app_msg(self.appid, to_wxid, appmsg)
+        return await self._message_api.post_app_msg(self.appid, to_wxid, appmsg)
 
     async def post_mini_app(self, to_wxid, mini_app_id, display_name, page_path, cover_img_url, title, user_name):
         """发送小程序消息"""
-        return self._message_api.post_mini_app(self.appid, to_wxid, mini_app_id, display_name, page_path, cover_img_url, title, user_name)
+        return await self._message_api.post_mini_app(self.appid, to_wxid, mini_app_id, display_name, page_path, cover_img_url, title, user_name)
 
     async def forward_file(self, to_wxid, xml):
         """转发文件"""
-        return self._message_api.forward_file(self.appid, to_wxid, xml)
+        return await self._message_api.forward_file(self.appid, to_wxid, xml)
 
     async def forward_image(self, to_wxid, xml):
         """转发图片"""
-        return self._message_api.forward_image(self.appid, to_wxid, xml)
+        return await self._message_api.forward_image(self.appid, to_wxid, xml)
 
     async def forward_video(self, to_wxid, xml):
         """转发视频"""
-        return self._message_api.forward_video(self.appid, to_wxid, xml)
+        return await self._message_api.forward_video(self.appid, to_wxid, xml)
 
     async def forward_url(self, to_wxid, xml):
         """转发链接"""
-        return self._message_api.forward_url(self.appid, to_wxid, xml)
+        return await self._message_api.forward_url(self.appid, to_wxid, xml)
 
     async def forward_mini_app(self, to_wxid, xml, cover_img_url):
         """转发小程序"""
-        return self._message_api.forward_mini_app(self.appid, to_wxid, xml, cover_img_url)
+        return await self._message_api.forward_mini_app(self.appid, to_wxid, xml, cover_img_url)
 
     async def revoke_msg(self, to_wxid, msg_id, new_msg_id, create_time):
         """撤回消息"""
-        return self._message_api.revoke_msg(self.appid, to_wxid, msg_id, new_msg_id, create_time)
+        return await self._message_api.revoke_msg(self.appid, to_wxid, msg_id, new_msg_id, create_time)
