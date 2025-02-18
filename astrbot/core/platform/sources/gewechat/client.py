@@ -25,7 +25,7 @@ class SimpleGewechatClient():
     @author: Soulter
     @website: https://github.com/Soulter
     '''
-    async def __init__(self, base_url: str, nickname: str, host: str, port: int, event_queue: asyncio.Queue):
+    def __init__(self, base_url: str, nickname: str, host: str, port: int, event_queue: asyncio.Queue):
         self.base_url = base_url
         if self.base_url.endswith('/'):
             self.base_url = self.base_url[:-1]
