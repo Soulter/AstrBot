@@ -8,7 +8,7 @@ from astrbot.api import logger
 from astrbot.core.platform.astr_message_event import MessageSesion
 from ...register import register_platform_adapter
 from .gewechat_event import GewechatPlatformEvent
-from .client import SimpleGewechatClient
+from .client import GewechatClient
 from astrbot.core.message.components import Plain
 
 if sys.version_info >= (3, 12):
@@ -49,7 +49,7 @@ class GewechatPlatformAdapter(Platform):
 
     @override
     def run(self):
-        self.client = SimpleGewechatClient(
+        self.client = GewechatClient(
             self.config['base_url'],
             self.config['nickname'],
             self.config['host'],
