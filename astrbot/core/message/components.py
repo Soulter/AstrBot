@@ -30,11 +30,19 @@ from enum import Enum
 from pydantic.v1 import BaseModel
 
 class ComponentType(Enum):
-    Plain = "Plain"
-    Face = "Face"
-    Record = "Record"
-    Video = "Video"
-    At = "At"
+    Plain = "Plain" # 纯文本消息
+    Face = "Face" # QQ表情
+    Record = "Record" # 语音
+    Video = "Video" # 视频
+    At = "At" # At
+    Node = "Node" # 转发消息的一个节点
+    Nodes = "Nodes" # 转发消息的多个节点
+    Poke = "Poke" # QQ 戳一戳
+    Image = "Image" # 图片
+    Reply = "Reply" # 回复
+    Forward = "Forward" # 转发消息
+    File = "File" # 文件
+    
     RPS = "RPS"  # TODO
     Dice = "Dice"  # TODO
     Shake = "Shake"  # TODO
@@ -43,18 +51,12 @@ class ComponentType(Enum):
     Contact = "Contact"  # TODO
     Location = "Location"  # TODO
     Music = "Music"
-    Image = "Image"
-    Reply = "Reply"
     RedBag = "RedBag"
-    Poke = "Poke"
-    Forward = "Forward"
-    Node = "Node"
     Xml = "Xml"
     Json = "Json"
     CardImage = "CardImage"
     TTS = "TTS"
     Unknown = "Unknown"
-    File = "File"
 
 
 class BaseMessageComponent(BaseModel):
@@ -325,11 +327,13 @@ class RedBag(BaseMessageComponent):
 
 
 class Poke(BaseMessageComponent):
-    type: ComponentType = "Poke"
-    qq: int
+    type: str = ""
+    id: T.Optional[int] = 0
+    qq: T.Optional[int] = 0
 
-    def __init__(self, **_):
-        super().__init__(**_)
+    def __init__(self, type: str, **_):
+        type = f"Poke:{type}"
+        super().__init__(type=type, **_)
 
 
 class Forward(BaseMessageComponent):
@@ -339,14 +343,14 @@ class Forward(BaseMessageComponent):
     def __init__(self, **_):
         super().__init__(**_)
 
-
-class Node(BaseMessageComponent):  # 该 component 仅支持使用 sendGroupForwardMessage 发送
+class Node(BaseMessageComponent):
+    '''群合并转发消息'''
     type: ComponentType = "Node"
-    id: T.Optional[int] = 0
-    name: T.Optional[str] = ""
-    uin: T.Optional[int] = 0
-    content: T.Optional[T.Union[str, list]] = ""
-    seq: T.Optional[T.Union[str, list]] = ""  # 不清楚是什么
+    id: T.Optional[int] = 0 # 忽略
+    name: T.Optional[str] = "" # qq昵称
+    uin: T.Optional[int] = 0 # qq号
+    content: T.Optional[T.Union[str, list]] = "" # 子消息段列表
+    seq: T.Optional[T.Union[str, list]] = "" # 忽略
     time: T.Optional[int] = 0
 
     def __init__(self, content: T.Union[str, list], **_):
@@ -360,6 +364,18 @@ class Node(BaseMessageComponent):  # 该 component 仅支持使用 sendGroupForw
     def toString(self):
         # logger.warn("Protocol: node doesn't support stringify")
         return ""
+    
+class Nodes(BaseMessageComponent):
+    type: ComponentType = "Nodes"
+    nodes: T.List[Node]
+    
+    def __init__(self, nodes: T.List[Node], **_):
+        super().__init__(nodes=nodes, **_)
+        
+    def toDict(self):
+        return {
+            "messages": [node.toDict() for node in self.nodes]
+        }
 
 
 class Xml(BaseMessageComponent):
@@ -449,6 +465,7 @@ ComponentTypes = {
     "poke": Poke,
     "forward": Forward,
     "node": Node,
+    "nodes": Nodes,
     "xml": Xml,
     "json": Json,
     "cardimage": CardImage,

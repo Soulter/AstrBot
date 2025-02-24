@@ -1,8 +1,8 @@
 from asyncio import Queue
-from typing import List, TypedDict, Union
+from typing import List, Union
 
 from astrbot.core import sp
-from astrbot.core.provider.provider import Provider
+from astrbot.core.provider.provider import Provider, TTSProvider, STTProvider
 from astrbot.core.db import BaseDatabase
 from astrbot.core.config.astrbot_config import AstrBotConfig
 from astrbot.core.provider.func_tool_manager import FuncCall
@@ -16,6 +16,7 @@ from .filter.command import CommandFilter
 from .filter.regex import RegexFilter
 from typing import Awaitable
 from astrbot.core.rag.knowledge_db_mgr import KnowledgeDBManager
+from astrbot.core.conversation_mgr import ConversationManager
 
 class Context:
     '''
@@ -44,6 +45,7 @@ class Context:
         db: BaseDatabase, 
         provider_manager: ProviderManager = None, 
         platform_manager: PlatformManager = None,
+        conversation_manager: ConversationManager = None,
         knowledge_db_manager: KnowledgeDBManager = None
     ):
         self._event_queue = event_queue
@@ -52,6 +54,7 @@ class Context:
         self.provider_manager = provider_manager
         self.platform_manager = platform_manager
         self.knowledge_db_manager = knowledge_db_manager
+        self.conversation_manager = conversation_manager
 
     def get_registered_star(self, star_name: str) -> StarMetadata:
         '''根据插件名获取插件的 Metadata'''
@@ -124,6 +127,14 @@ class Context:
         '''获取所有用于文本生成任务的 LLM Provider(Chat_Completion 类型)。'''
         return self.provider_manager.provider_insts
     
+    def get_all_tts_providers(self) -> List[TTSProvider]:
+        '''获取所有用于 TTS 任务的 Provider。'''
+        return self.provider_manager.tts_provider_insts
+    
+    def get_all_stt_providers(self) -> List[STTProvider]:
+        '''获取所有用于 STT 任务的 Provider。'''
+        return self.provider_manager.stt_provider_insts
+    
     def get_using_provider(self) -> Provider:
         '''
         获取当前使用的用于文本生成任务的 LLM Provider(Chat_Completion 类型)。
@@ -131,6 +142,18 @@ class Context:
         通过 /provider 指令切换。
         '''
         return self.provider_manager.curr_provider_inst
+    
+    def get_using_tts_provider(self) -> TTSProvider:
+        '''
+        获取当前使用的用于 TTS 任务的 Provider。
+        '''
+        return self.provider_manager.curr_tts_provider_inst
+    
+    def get_using_stt_provider(self) -> STTProvider:
+        '''
+        获取当前使用的用于 STT 任务的 Provider。
+        '''
+        return self.provider_manager.curr_stt_provider_inst
     
     def get_config(self) -> AstrBotConfig:
         '''获取 AstrBot 的配置。'''

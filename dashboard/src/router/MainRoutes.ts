@@ -17,11 +17,20 @@ const MainRoutes = {
       component: () => import('@/views/ExtensionPage.vue')
     },
     {
+      name: 'Platforms',
+      path: '/platforms',
+      component: () => import('@/views/PlatformPage.vue')
+    },
+    {
+      name: 'Providers',
+      path: '/providers',
+      component: () => import('@/views/ProviderPage.vue')
+    },
+    {
       name: 'Configs',
       path: '/config',
       component: () => import('@/views/ConfigPage.vue')
     },
-
     {
       name: 'Default',
       path: '/dashboard/default',
@@ -41,6 +50,11 @@ const MainRoutes = {
       name: 'Chat',
       path: '/chat',
       component: () => import('@/views/ChatPage.vue')
+    },
+    {
+      name: 'Settings',
+      path: '/settings',
+      component: () => import('@/views/Settings.vue')
     },
     {
       name: 'About',

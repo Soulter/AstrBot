@@ -22,24 +22,21 @@ class ProviderZhipu(ProviderOpenAIOfficial):
     async def text_chat(
         self,
         prompt: str,
-        session_id: str,
+        session_id: str = None,
         image_urls: List[str]=None,
         func_tool: FuncCall=None,
-        contexts=None,
+        contexts=[],
         system_prompt=None,
         **kwargs
     ) -> LLMResponse: 
         new_record = await self.assemble_context(prompt, image_urls)
         context_query = []
         
-        if not contexts:
-            context_query = [*self.session_memory[session_id], new_record]
-        else:
-            context_query = [*contexts, new_record]
+        context_query = [*contexts, new_record]
         
         model_cfgs: dict = self.provider_config.get("model_config", {})
+        model = self.get_model()
         # glm-4v-flash 只支持一张图片
-        model: str = model_cfgs.get("model", "")
         if model.lower() == 'glm-4v-flash' and image_urls and len(context_query) > 1:
             logger.debug("glm-4v-flash 只支持一张图片，将只保留最后一张图片")
             logger.debug(context_query)
@@ -62,7 +59,6 @@ class ProviderZhipu(ProviderOpenAIOfficial):
         }
         try:
             llm_response = await self._query(payloads, func_tool)
-            await self.save_history(contexts, new_record, session_id, llm_response)
             return llm_response
         except Exception as e:
             if "maximum context length" in str(e):

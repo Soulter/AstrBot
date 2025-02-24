@@ -1,6 +1,7 @@
 from __future__ import annotations
 import abc
 import inspect
+from astrbot.api import logger
 from typing import List, AsyncGenerator, Union, Awaitable
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from .context import PipelineContext
@@ -36,16 +37,18 @@ class Stage(abc.ABC):
         ctx: PipelineContext,
         event: AstrMessageEvent, 
         handler: Awaitable,
-        **params
+        *args,
+        **kwargs,
     ) -> AsyncGenerator[None, None]:
         '''调用 Handler。'''
         # 判断 handler 是否是类方法（通过装饰器注册的没有 __self__ 属性）
         ready_to_call = None
         try:
-            ready_to_call = handler(event, **params)
+            ready_to_call = handler(event, *args, **kwargs)
         except TypeError as e:
             # 向下兼容
-            ready_to_call = handler(event, ctx.plugin_manager.context, **params)
+            logger.debug(str(e))
+            ready_to_call = handler(event, ctx.plugin_manager.context, *args, **kwargs)
         
         if isinstance(ready_to_call, AsyncGenerator):
             async for ret in ready_to_call:

@@ -3,7 +3,9 @@ import asyncio
 import aiohttp
 import quart
 import base64
-
+import datetime
+import re
+import os
 from astrbot.api.platform import AstrBotMessage, MessageMember, MessageType
 from astrbot.api.message_components import Plain, Image, At, Record
 from astrbot.api import logger, sp
@@ -50,6 +52,10 @@ class SimpleGewechatClient():
         self.event_queue = event_queue
         
         self.multimedia_downloader = None
+        
+        self.userrealnames = {}
+        
+        self.stop = False
     
     async def get_token_id(self):
         async with aiohttp.ClientSession() as session:
@@ -66,6 +72,17 @@ class SimpleGewechatClient():
         if type_name == "Offline":
             logger.critical("收到 gewechat 下线通知。")
             return
+        
+        if 'Data' in data and 'CreateTime' in data['Data']:
+            # 得到系统 UTF+8 的 ts
+            tz_offset = datetime.timedelta(hours=8)
+            tz = datetime.timezone(tz_offset)
+            ts = datetime.datetime.now(tz).timestamp()
+            create_time = data['Data']['CreateTime']
+            if create_time < ts - 30:
+                logger.warning(f"消息时间戳过旧: {create_time}，当前时间戳: {ts}")
+                return
+
         
         abm = AstrBotMessage()
         d = data['Data']
@@ -88,7 +105,8 @@ class SimpleGewechatClient():
             content = _t[1]
             if '\u2005' in content: 
                 # at
-                content = content.split('\u2005')[1]
+                # content = content.split('\u2005')[1]
+                content = re.sub(r'@[^\u2005]*\u2005', '', content)
             abm.group_id = from_user_name
             # at
             msg_source = d['MsgSource']
@@ -105,9 +123,25 @@ class SimpleGewechatClient():
         if at_me:
             abm.message.insert(0, At(qq=abm.self_id))
         
-        user_real_name = d.get('PushContent', 'unknown : ').split(' : ')[0] \
-            .replace('在群聊中@了你', '') \
-            .replace('在群聊中发了一段语音', '') # 真实昵称
+        # 解析用户真实名字
+        user_real_name = "unknown"
+        if abm.group_id:
+            if abm.group_id not in self.userrealnames or user_id not in self.userrealnames[abm.group_id]:
+                # 获取群成员列表，并且缓存
+                if abm.group_id not in self.userrealnames:
+                    self.userrealnames[abm.group_id] = {}
+                member_list = await self.get_chatroom_member_list(abm.group_id)
+                logger.debug(f"获取到 {abm.group_id} 的群成员列表。")
+                if member_list and 'memberList' in member_list:
+                    for member in member_list['memberList']:
+                        self.userrealnames[abm.group_id][member['wxid']] = member['nickName']
+                if user_id in self.userrealnames[abm.group_id]:
+                    user_real_name = self.userrealnames[abm.group_id][user_id]
+            else:
+                user_real_name = self.userrealnames[abm.group_id][user_id]
+        else:
+            user_real_name = d.get('PushContent', 'unknown : ').split(' : ')[0]
+
         abm.sender = MessageMember(user_id, user_real_name)
         abm.raw_message = d
         abm.message_str = ""
@@ -141,12 +175,11 @@ class SimpleGewechatClient():
                     with open(file_path, "wb") as f:
                         f.write(voice_data)
                     abm.message.append(Record(file=file_path, url=file_path))
-                
             case _:
-                logger.error(f"未实现的消息类型: {d['MsgType']}")
-                return
+                logger.info(f"未实现的消息类型: {d['MsgType']}")
+                abm.raw_message = d
         
-        logger.info(f"abm: {abm}")
+        logger.debug(f"abm: {abm}")
         return abm
 
     async def callback(self):
@@ -189,7 +222,7 @@ class SimpleGewechatClient():
                 logger.info(f"设置回调结果: {json_blob}")
                 if json_blob['ret'] != 200:
                     raise Exception(f"设置回调失败: {json_blob}")
-                logger.info(f"将在 {self.callback_url} 上接收 gewechat 下发的消息。如果一直没收到消息请先尝试重启 AstrBot。")
+                logger.info(f"将在 {self.callback_url} 上接收 gewechat 下发的消息。如果一直没收到消息请先尝试重启 AstrBot。如果仍没收到请到管理面板聊天页输入 /gewe_logout 重新登录。")
         
     async def start_polling(self):
         threading.Thread(target=asyncio.run, args=(self._set_callback_url(),)).start()
@@ -200,7 +233,7 @@ class SimpleGewechatClient():
         )
     
     async def shutdown_trigger_placeholder(self):
-        while not self.event_queue.closed:
+        while not self.event_queue.closed and not self.stop:
             await asyncio.sleep(1)
         logger.info("gewechat 适配器已关闭。")
         
@@ -272,8 +305,25 @@ class SimpleGewechatClient():
             "uuid": qr_uuid,
             "appId": appid
         })
+        verify_flag = False
         while retry_cnt > 0:
             retry_cnt -= 1
+
+            # 需要验证码
+            if verify_flag or os.path.exists("data/temp/gewe_code"):
+                with open("data/temp/gewe_code", "r") as f:
+                    code = f.read().strip()
+                    if not code:
+                        logger.warning("未找到验证码，请在管理面板聊天页输入 /gewe_code 验证码 来验证，如 /gewe_code 123456")
+                        await asyncio.sleep(5)
+                        continue
+                    payload['captchCode'] = code
+                    logger.info(f"使用验证码: {code}")
+                    try:
+                        os.remove("data/temp/gewe_code")
+                    except:
+                        logger.warning("删除验证码文件 data/temp/gewe_code 失败。")
+
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     f"{self.base_url}/login/checkLogin",
@@ -282,17 +332,26 @@ class SimpleGewechatClient():
                 ) as resp:
                     json_blob = await resp.json()
                     logger.info(f"检查登录状态: {json_blob}")
-                    status = json_blob['data']['status']
-                    nickname = json_blob['data'].get('nickName', '')
-                    if status == 1:
-                        logger.info(f"等待确认...{nickname}")
-                    elif status == 2:
-                        logger.info(f"绿泡泡平台登录成功: {nickname}")
-                        break
-                    elif status == 0:
-                        logger.info("等待扫码...")
+
+                    ret = json_blob['ret']
+                    msg = ''
+                    if json_blob['data'] and 'msg' in json_blob['data']:
+                        msg = json_blob['data']['msg']
+                    if ret == 500 and '安全验证码' in msg:
+                        logger.warning("此次登录需要安全验证码，请在管理面板聊天页输入 /gewe_code 验证码 来验证，如 /gewe_code 123456")
+                        verify_flag = True
                     else:
-                        logger.warning(f"未知状态: {status}")
+                        status = json_blob['data']['status']
+                        nickname = json_blob['data'].get('nickName', '')
+                        if status == 1: 
+                            logger.info(f"等待确认...{nickname}")
+                        elif status == 2:
+                            logger.info(f"绿泡泡平台登录成功: {nickname}")
+                            break
+                        elif status == 0:
+                            logger.info("等待扫码...")
+                        else:
+                            logger.warning(f"未知状态: {status}")
             await asyncio.sleep(5)
             
         if appid:
@@ -300,12 +359,31 @@ class SimpleGewechatClient():
             self.appid = appid
             logger.info(f"已保存 APPID: {appid}")
     
-    async def post_text(self, to_wxid, content: str):
+    '''API'''
+    
+    async def get_chatroom_member_list(self, chatroom_wxid: str):
+        payload = {
+            "appId": self.appid,
+            "chatroomId": chatroom_wxid
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/group/getChatroomMemberList",
+                headers=self.headers,
+                json=payload
+            ) as resp:
+                json_blob = await resp.json()
+                return json_blob['data']
+    
+    async def post_text(self, to_wxid, content: str, ats: str = ""):
         payload = {
             "appId": self.appid,
             "toWxid": to_wxid,
             "content": content,
         }
+        if ats:
+            payload['ats'] = ats
         
         async with aiohttp.ClientSession() as session:
             async with session.post(
@@ -350,3 +428,20 @@ class SimpleGewechatClient():
             ) as resp:
                 json_blob = await resp.json()
                 logger.debug(f"发送语音结果: {json_blob}")
+                
+    async def post_file(self, to_wxid, file_url: str, file_name: str):
+        payload = {
+            "appId": self.appid,
+            "toWxid": to_wxid,
+            "fileUrl": file_url,
+            "fileName": file_name
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/message/postFile",
+                headers=self.headers,
+                json=payload
+            ) as resp:
+                json_blob = await resp.json()
+                logger.debug(f"发送文件结果: {json_blob}")

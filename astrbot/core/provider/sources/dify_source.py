@@ -31,15 +31,22 @@ class ProviderDify(Provider):
             raise Exception("Dify API 类型不能为空。")
         self.model_name = "dify"
         self.workflow_output_key = provider_config.get("dify_workflow_output_key", "astrbot_wf_output")
-        
+        self.dify_query_input_key = provider_config.get("dify_query_input_key", "astrbot_text_query")
+        self.variables: dict = provider_config.get("variables", {})
+        if not self.dify_query_input_key:
+            self.dify_query_input_key = "astrbot_text_query"
+        self.timeout = provider_config.get("timeout", 120)
+        if isinstance(self.timeout, str):
+            self.timeout = int(self.timeout)
         self.conversation_ids = {}
+        '''记录当前 session id 的对话 ID'''
 
 
     async def text_chat(
         self,
         prompt: str,
         session_id: str = None,
-        image_urls: List[str] = None,
+        image_urls: List[str] = [],
         func_tool: FuncCall = None,
         contexts: List = None,
         system_prompt: str = None,
@@ -64,62 +71,69 @@ class ProviderDify(Provider):
             else:
                 # TODO: 处理更多情况
                 logger.warning(f"未知的图片链接：{image_url}，图片将忽略。")
-            
-        logger.debug(files_payload)
         
         # 获得会话变量
+        payload_vars = self.variables.copy()
+        # 动态变量
         session_vars = sp.get("session_variables", {})
         session_var = session_vars.get(session_id, {})
+        payload_vars.update(session_var)
         
-        match self.api_type:
-            case "chat" | "agent":
-                async for chunk in self.api_client.chat_messages(
-                    inputs={
-                        **session_var
-                    },
-                    query=prompt,
-                    user=session_id,
-                    conversation_id=conversation_id,
-                    files=files_payload
-                ):
-                    logger.debug(f"dify resp chunk: {chunk}")
-                    if chunk['event'] == "message" or \
-                        chunk['event'] == "agent_message":
-                        result += chunk['answer']
-                        if not conversation_id:
-                            self.conversation_ids[session_id] = chunk['conversation_id']
-                            conversation_id = chunk['conversation_id']
-            
-            case "workflow":
-                async for chunk in self.api_client.workflow_run(
-                    inputs={
-                        "astrbot_text_query": prompt,
-                        "astrbot_session_id": session_id,
-                        **session_var
-                    },
-                    user=session_id,
-                    files=files_payload
-                ):
-                    match chunk['event']:
-                        case "workflow_started":
-                            logger.info(f"Dify 工作流(ID: {chunk['workflow_run_id']})开始运行。")
-                        case "node_finished":
-                            logger.debug(f"Dify 工作流节点(ID: {chunk['data']['node_id']} Title: {chunk['data'].get('title', '')})运行结束。")
-                        case "workflow_finished":
-                            logger.info(f"Dify 工作流(ID: {chunk['workflow_run_id']})运行结束。")
-                            if chunk['data']['error']:
-                                logger.error(f"Dify 工作流出现错误：{chunk['data']['error']}")
-                                raise Exception(f"Dify 工作流出现错误：{chunk['data']['error']}")
-                            if self.workflow_output_key not in chunk['data']['outputs']:
-                                raise Exception(f"Dify 工作流的输出不包含指定的键名：{self.workflow_output_key}")
-                            result = chunk['data']['outputs'][self.workflow_output_key]
-            case _:
-                raise Exception(f"未知的 Dify API 类型：{self.api_type}")
-
+        try:
+            match self.api_type:
+                case "chat" | "agent":
+                    async for chunk in self.api_client.chat_messages(
+                        inputs={
+                            **payload_vars,
+                        },
+                        query=prompt,
+                        user=session_id,
+                        conversation_id=conversation_id,
+                        files=files_payload,
+                        timeout=self.timeout
+                    ):
+                        logger.debug(f"dify resp chunk: {chunk}")
+                        if chunk['event'] == "message" or \
+                            chunk['event'] == "agent_message":
+                            result += chunk['answer']
+                            if not conversation_id:
+                                self.conversation_ids[session_id] = chunk['conversation_id']
+                                conversation_id = chunk['conversation_id']
+                
+                case "workflow":
+                    async for chunk in self.api_client.workflow_run(
+                        inputs={
+                            self.dify_query_input_key: prompt,
+                            "astrbot_session_id": session_id,
+                            **payload_vars,
+                        },
+                        user=session_id,
+                        files=files_payload,
+                        timeout=self.timeout
+                    ):
+                        match chunk['event']:
+                            case "workflow_started":
+                                logger.info(f"Dify 工作流(ID: {chunk['workflow_run_id']})开始运行。")
+                            case "node_finished":
+                                logger.debug(f"Dify 工作流节点(ID: {chunk['data']['node_id']} Title: {chunk['data'].get('title', '')})运行结束。")
+                            case "workflow_finished":
+                                logger.info(f"Dify 工作流(ID: {chunk['workflow_run_id']})运行结束。")
+                                if chunk['data']['error']:
+                                    logger.error(f"Dify 工作流出现错误：{chunk['data']['error']}")
+                                    raise Exception(f"Dify 工作流出现错误：{chunk['data']['error']}")
+                                if self.workflow_output_key not in chunk['data']['outputs']:
+                                    raise Exception(f"Dify 工作流的输出不包含指定的键名：{self.workflow_output_key}")
+                                result = chunk['data']['outputs'][self.workflow_output_key]
+                case _:
+                    raise Exception(f"未知的 Dify API 类型：{self.api_type}")
+        except Exception as e:
+            logger.error(f"Dify 请求失败：{str(e)}")
+            return LLMResponse(role="err", completion_text=f"Dify 请求失败：{str(e)}")
+        
         return LLMResponse(role="assistant", completion_text=result)
 
     async def forget(self, session_id):
-        self.conversation_ids.pop(session_id, None)
+        self.conversation_ids[session_id] = ""
         return True
 
     async def get_current_key(self):

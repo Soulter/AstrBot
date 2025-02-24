@@ -1,8 +1,10 @@
 import os
 import uuid
+import base64
+from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, MessageChain
 from astrbot.api.message_components import Plain, Image
-from astrbot.core.utils.io import file_to_base64, download_image_by_url
+from astrbot.core.utils.io import download_image_by_url
 from astrbot.core import web_chat_back_queue
 
 class WebChatMessageEvent(AstrMessageEvent):
@@ -30,6 +32,11 @@ class WebChatMessageEvent(AstrMessageEvent):
                     with open(path, "wb") as f:
                         with open(ph, "rb") as f2:
                             f.write(f2.read())
+                elif comp.file.startswith("base64://"):
+                    base64_str = comp.file[9:]
+                    image_data = base64.b64decode(base64_str)
+                    with open(path, "wb") as f:
+                        f.write(image_data)
                 elif comp.file and comp.file.startswith("http"):
                     await download_image_by_url(comp.file, path=path)
                 else:
@@ -37,5 +44,7 @@ class WebChatMessageEvent(AstrMessageEvent):
                         with open(comp.file, "rb") as f2:
                             f.write(f2.read())
                 web_chat_back_queue.put_nowait((f"[IMAGE]{filename}", cid))
+            else:
+                logger.debug(f"webchat 忽略: {comp.type}")
         web_chat_back_queue.put_nowait(None)
         await super().send(message)

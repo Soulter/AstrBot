@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Type
 from .func_tool_manager import FuncCall
 from openai.types.chat.chat_completion import ChatCompletion
+from astrbot.core.db.po import Conversation
 
 
 class ProviderType(enum.Enum):
@@ -38,15 +39,20 @@ class ProviderRequest():
     '''上下文。格式与 openai 的上下文格式一致：
     参考 https://platform.openai.com/docs/api-reference/chat/create#chat-create-messages
     '''
-    
     system_prompt: str = ""
     '''系统提示词'''
+    conversation: Conversation = None
     
+    def __repr__(self):
+        return f"ProviderRequest(prompt={self.prompt}, session_id={self.session_id}, image_urls={self.image_urls}, func_tool={self.func_tool}, contexts={self.contexts}, system_prompt={self.system_prompt})"
+    
+    def __str__(self):
+        return self.__repr__()
     
 @dataclass
 class LLMResponse:
     role: str
-    '''角色'''
+    '''角色, assistant, tool, err'''
     completion_text: str = ""
     '''LLM 返回的文本'''
     tools_call_args: List[Dict[str, any]] = field(default_factory=list)

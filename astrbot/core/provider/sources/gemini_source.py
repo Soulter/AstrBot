@@ -1,7 +1,6 @@
-import traceback
 import base64
-import json
 import aiohttp
+import random
 from astrbot.core.utils.io import download_image_by_url
 from astrbot.core.db import BaseDatabase
 from astrbot.api.provider import Provider, Personality
@@ -12,17 +11,18 @@ from ..register import register_provider_adapter
 from astrbot.core.provider.entites import LLMResponse
 
 class SimpleGoogleGenAIClient():
-    def __init__(self, api_key: str, api_base: str):
+    def __init__(self, api_key: str, api_base: str, timeout: int=120) -> None:
         self.api_key = api_key
         if api_base.endswith("/"):
             self.api_base = api_base[:-1]
         else:
             self.api_base = api_base
         self.client = aiohttp.ClientSession(trust_env=True)
+        self.timeout = timeout
         
     async def models_list(self) -> List[str]:
         request_url = f"{self.api_base}/v1beta/models?key={self.api_key}"
-        async with self.client.get(request_url, timeout=10) as resp:
+        async with self.client.get(request_url, timeout=self.timeout) as resp:
             response = await resp.json()
             
             models = []
@@ -48,9 +48,19 @@ class SimpleGoogleGenAIClient():
         payload["contents"] = contents
         logger.debug(f"payload: {payload}")
         request_url = f"{self.api_base}/v1beta/models/{model}:generateContent?key={self.api_key}"
-        async with self.client.post(request_url, json=payload, timeout=10) as resp:
-            response = await resp.json()
-            return response
+        async with self.client.post(request_url, json=payload, timeout=self.timeout) as resp:
+            if "application/json" in resp.headers.get("Content-Type"):
+                try:
+                    response = await resp.json()
+                except Exception as e:
+                    text = await resp.text()
+                    logger.error(f"Gemini 返回了非 json 数据: {text}")
+                    raise e
+                return response
+            else:
+                text = await resp.text()
+                logger.error(f"Gemini 返回了非 json 数据: {text}")
+                raise Exception("Gemini 返回了非 json 数据： ")
 
 
 @register_provider_adapter("googlegenai_chat_completion", "Google Gemini Chat Completion 提供商适配器")
@@ -67,65 +77,18 @@ class ProviderGoogleGenAI(Provider):
         self.chosen_api_key = None
         self.api_keys: List = provider_config.get("key", [])
         self.chosen_api_key = self.api_keys[0] if len(self.api_keys) > 0 else None
-        
+        self.timeout = provider_config.get("timeout", 180)
+        if isinstance(self.timeout, str):
+            self.timeout = int(self.timeout)
         self.client = SimpleGoogleGenAIClient(
             api_key=self.chosen_api_key,
-            api_base=provider_config.get("api_base", None)
+            api_base=provider_config.get("api_base", None),
+            timeout=self.timeout
         )
         self.set_model(provider_config['model_config']['model'])
-    
-    async def get_human_readable_context(self, session_id, page, page_size):
-        if session_id not in self.session_memory:
-            raise Exception("会话 ID 不存在")
-        contexts = []
-        temp_contexts = []
-        for record in self.session_memory[session_id]:
-            if record['role'] == "user":
-                temp_contexts.append(f"User: {record['content']}")
-            elif record['role'] == "assistant":
-                temp_contexts.append(f"Assistant: {record['content']}")
-                contexts.insert(0, temp_contexts)
-                temp_contexts = []
-
-        # 展平 contexts 列表
-        contexts = [item for sublist in contexts for item in sublist]
-
-        # 计算分页
-        paged_contexts = contexts[(page-1)*page_size:page*page_size]
-        total_pages = len(contexts) // page_size
-        if len(contexts) % page_size != 0:
-            total_pages += 1
-        
-        return paged_contexts, total_pages
 
     async def get_models(self):
         return await self.client.models_list()
-    
-    async def pop_record(self, session_id: str, pop_system_prompt: bool = False):
-        '''
-        弹出第一条记录
-        '''
-        if session_id not in self.session_memory:
-            raise Exception("会话 ID 不存在")
-
-        if len(self.session_memory[session_id]) == 0:
-            return None
-
-        for i in range(len(self.session_memory[session_id])):
-            # 检查是否是 system prompt
-            if not pop_system_prompt and self.session_memory[session_id][i]['user']['role'] == "system":
-                # 如果只有一个 system prompt，才不删掉
-                f = False
-                for j in range(i+1, len(self.session_memory[session_id])):
-                    if self.session_memory[session_id][j]['user']['role'] == "system":
-                        f = True
-                        break
-                if not f:
-                    continue
-            record = self.session_memory[session_id].pop(i)
-            break
-
-        return record
     
     async def _query(self, payloads: dict, tools: FuncCall) -> LLMResponse:
         tool = None
@@ -144,6 +107,9 @@ class ProviderGoogleGenAI(Provider):
         for message in payloads["messages"]:
             if message["role"] == "user":
                 if isinstance(message["content"], str):
+                    if not message['content']:
+                        message['content'] = "<empty_content>"
+                    
                     google_genai_conversation.append({
                         "role": "user",
                         "parts": [{"text": message["content"]}]
@@ -153,6 +119,8 @@ class ProviderGoogleGenAI(Provider):
                     parts = []
                     for part in message["content"]:
                         if part["type"] == "text":
+                            if not part["text"]:
+                                part["text"] = "<empty_content>"
                             parts.append({"text": part["text"]})
                         elif part["type"] == "image_url":
                             parts.append({"inline_data": {
@@ -165,12 +133,13 @@ class ProviderGoogleGenAI(Provider):
                     })
                         
             elif message["role"] == "assistant":
+                if not message["content"]:
+                    message["content"] = "<empty_content>"
                 google_genai_conversation.append({
                     "role": "model",
                     "parts": [{"text": message["content"]}]
                 })
-                
-        
+
         logger.debug(f"google_genai_conversation: {google_genai_conversation}")
         
         result = await self.client.generate_content(
@@ -197,91 +166,80 @@ class ProviderGoogleGenAI(Provider):
         llm_response.completion_text = llm_response.completion_text.strip()
         return llm_response
 
-
     async def text_chat(
         self,
         prompt: str,
-        session_id: str,
+        session_id: str = None,
         image_urls: List[str]=None,
         func_tool: FuncCall=None,
-        contexts=None,
+        contexts=[],
         system_prompt=None,
         **kwargs
     ) -> LLMResponse: 
         new_record = await self.assemble_context(prompt, image_urls)
         context_query = []
-        if not contexts:
-            context_query = [*self.session_memory[session_id], new_record]
-        else:
-            context_query = [*contexts, new_record]
+        context_query = [*contexts, new_record]
         if system_prompt:
             context_query.insert(0, {"role": "system", "content": system_prompt})
             
         for part in context_query:
             if '_no_save' in part:
                 del part['_no_save']
+                
+        model_config = self.provider_config.get("model_config", {})
+        model_config['model'] = self.get_model()
 
         payloads = {
             "messages": context_query,
-            **self.provider_config.get("model_config", {})
+            **model_config
         }
         llm_response = None
-        try:
-            llm_response = await self._query(payloads, func_tool)
-        except Exception as e:
-            if "maximum context length" in str(e):
-                retry_cnt = 10
-                while retry_cnt > 0:
-                    logger.warning(f"请求失败：{e}。上下文长度超过限制。尝试弹出最早的记录然后重试。")
-                    try:
-                        self.pop_record(session_id)
-                        llm_response = await self._query(payloads, func_tool)
-                        break
-                    except Exception as e:
-                        if "maximum context length" in str(e):
-                            retry_cnt -= 1
-                        else:
-                            raise e
-                if retry_cnt == 0:
-                    llm_response = LLMResponse("err", "err: 请尝试  /reset 重置会话")
-            elif "Function calling is not enabled" in str(e):
-                logger.info(f"{self.get_model()} 不支持函数调用工具调用，已经自动去除")
-                if 'tools' in payloads:
-                    del payloads['tools']
-                llm_response = await self._query(payloads, None)
-            else:
-                logger.error(f"发生了错误(gemini_source)。Provider 配置如下: {self.provider_config}")
-                
-                raise e
-
-        if kwargs.get("persist", True) and llm_response:
-            await self.save_history(contexts, new_record, session_id, llm_response)
-            
-        return llm_response
-    
-    async def save_history(self, contexts: List, new_record: dict, session_id: str, llm_response: LLMResponse):
-        if llm_response.role == "assistant" and session_id:
-            # 文本回复
-            if not contexts:
-                # 添加用户 record
-                self.session_memory[session_id].append(new_record)
-                # 添加 assistant record
-                self.session_memory[session_id].append({
-                    "role": "assistant",
-                    "content": llm_response.completion_text
-                })
-            else:
-                contexts_to_save = list(filter(lambda item: '_no_save' not in item, contexts))
-                self.session_memory[session_id] = [*contexts_to_save, new_record, {
-                    "role": "assistant",
-                    "content": llm_response.completion_text
-                }]
-            self.db_helper.update_llm_history(session_id, json.dumps(self.session_memory[session_id]), self.provider_config['id'])
         
-    async def forget(self, session_id: str) -> bool:
-        self.session_memory[session_id] = []
-        self.db_helper.update_llm_history(session_id, json.dumps(self.session_memory[session_id]), self.provider_config['id'])
-        return True
+        retry = 10
+        keys = self.api_keys.copy()
+        chosen_key = random.choice(keys)
+        
+        for i in range(retry):
+            try:
+                self.client.api_key = chosen_key 
+                llm_response = await self._query(payloads, func_tool)
+                break
+            except Exception as e:
+                if "maximum context length" in str(e):
+                    retry_cnt = 20
+                    while retry_cnt > 0:
+                        logger.warning(f"请求失败：{e}。上下文长度超过限制。尝试弹出最早的记录然后重试。当前记录条数: {len(context_query)}")
+                        try:
+                            await self.pop_record(context_query)
+                            llm_response = await self._query(payloads, func_tool)
+                            break
+                        except Exception as e:
+                            if "maximum context length" in str(e):
+                                retry_cnt -= 1
+                            else:
+                                raise e
+                    if retry_cnt == 0:
+                        llm_response = LLMResponse("err", "err: 请尝试  /reset 重置会话")
+                elif "Function calling is not enabled" in str(e):
+                    logger.info(f"{self.get_model()} 不支持函数工具调用，已自动去除，不影响使用。")
+                    if 'tools' in payloads:
+                        del payloads['tools']
+                    llm_response = await self._query(payloads, None)
+                    break
+                elif "429" in str(e) or "API key not valid" in str(e):
+                    keys.remove(chosen_key)
+                    if len(keys) > 0:
+                        chosen_key = random.choice(keys)
+                        logger.info(f"检测到 Key 异常({str(e)})，正在尝试更换 API Key 重试... 当前 Key: {chosen_key[:12]}...")
+                        continue
+                    else:
+                        logger.error(f"检测到 Key 异常({str(e)})，且已没有可用的 Key。 当前 Key: {chosen_key[:12]}...")
+                        raise Exception("API 资源已耗尽，且没有可用的 Key 重试...")
+                else:
+                    logger.error(f"发生了错误(gemini_source)。Provider 配置如下: {self.provider_config}")
+                    raise e
+
+        return llm_response
 
     def get_current_key(self) -> str:
         return self.client.api_key
@@ -302,8 +260,14 @@ class ProviderGoogleGenAI(Provider):
                 if image_url.startswith("http"):
                     image_path = await download_image_by_url(image_url)
                     image_data = await self.encode_image_bs64(image_path)
+                elif image_url.startswith("file:///"):
+                    image_path = image_url.replace("file:///", "")
+                    image_data = await self.encode_image_bs64(image_path)
                 else:
                     image_data = await self.encode_image_bs64(image_url)
+                if not image_data:
+                    logger.warning(f"图片 {image_url} 得到的结果为空，将忽略。")
+                    continue
                 user_content["content"].append({"type": "image_url", "image_url": {"url": image_data}})
             return user_content
         else:
@@ -319,3 +283,7 @@ class ProviderGoogleGenAI(Provider):
             image_bs64 = base64.b64encode(f.read()).decode('utf-8')
             return "data:image/jpeg;base64," + image_bs64
         return ''
+    
+    async def terminate(self):
+        await self.client.client.close()
+        logger.info("Google GenAI 适配器已终止。")

@@ -8,7 +8,7 @@ from typing import List, Union
 from astrbot.core.message.components import Plain, Image, BaseMessageComponent, Face, At, AtAll, Forward
 from astrbot.core.utils.metrics import Metric
 from astrbot.core.provider.entites import ProviderRequest
-
+from astrbot.core.db.po import Conversation
 
 @dataclass
 class MessageSesion:
@@ -31,12 +31,19 @@ class AstrMessageEvent(abc.ABC):
                 platform_meta: PlatformMetadata,
                 session_id: str,):
         self.message_str = message_str
+        '''纯文本的消息'''
         self.message_obj = message_obj
+        '''消息对象，AstrBotMessage。带有完整的消息结构。'''
         self.platform_meta = platform_meta
+        '''消息平台的信息, 其中 name 是平台的类型，如 aiocqhttp'''
         self.session_id = session_id
+        '''用户的会话 ID。可以直接使用下面的 unified_msg_origin'''
         self.role = "member"
+        '''用户是否是管理员。如果是管理员，这里是 admin'''
         self.is_wake = False # 是否通过 WakingStage
-        self.is_at_or_wake_command = False # 是否是 At 机器人或者带有唤醒词或者是私聊（事件监听器会让 is_wake 设为 True）
+        '''是否唤醒'''
+        self.is_at_or_wake_command = False
+        '''是否是 At 机器人或者带有唤醒词或者是私聊（事件监听器会让 is_wake 设为 True，但是不会让这个属性置为 True）'''
         self._extras = {}
         self.session = MessageSesion(
             platform_name=platform_meta.name,
@@ -44,13 +51,14 @@ class AstrMessageEvent(abc.ABC):
             session_id=session_id
         )
         self.unified_msg_origin = str(self.session)
-        
+        '''统一的消息来源字符串。格式为 platform_name:message_type:session_id'''
         self._result: MessageEventResult = None
         '''消息事件的结果'''
         
         self._has_send_oper = False 
         '''是否有过至少一次发送操作'''
-        
+        self.call_llm = False
+        '''是否在此消息事件中禁止默认的 LLM 请求'''
         
         # back_compability
         self.platform = platform_meta
@@ -235,7 +243,15 @@ class AstrMessageEvent(abc.ABC):
         '''
         if self._result is None:
             return False # 默认是继续传播
-        return self._result.is_stopped()        
+        return self._result.is_stopped()     
+    
+    def should_call_llm(self, call_llm: bool):
+        '''
+        是否在此消息事件中禁止默认的 LLM 请求。
+        
+        只会阻止 AstrBot 默认的 LLM 请求链路，不会阻止插件中的 LLM 请求。
+        '''
+        self.call_llm = call_llm
         
     def get_result(self) -> MessageEventResult:
         '''
@@ -298,9 +314,10 @@ class AstrMessageEvent(abc.ABC):
         prompt: str,
         func_tool_manager = None,
         session_id: str = None,
-        image_urls: List[str] = None,
-        contexts: List = None,
-        system_prompt: str = ""
+        image_urls: List[str] = [],
+        contexts: List = [],
+        system_prompt: str = "",
+        conversation: Conversation = None
     ) -> ProviderRequest:
         '''
         创建一个 LLM 请求。
@@ -309,10 +326,12 @@ class AstrMessageEvent(abc.ABC):
         ```py
         yield event.request_llm(prompt="hi")
         ```
-        
+        prompt: 提示词
+        session_id: 已经过时，留空即可
         image_urls: 可以是 base64:// 或者 http:// 开头的图片链接，也可以是本地图片路径。
-        contexts: 当指定 contexts 时，将会**只**使用 contexts 作为上下文。
+        contexts: 当指定 contexts 时，将会使用 contexts 作为上下文。
         func_tool_manager: 函数工具管理器，用于调用函数工具。用 self.context.get_llm_tool_manager() 获取。
+        conversation: 可选。如果指定，将在指定的对话中进行 LLM 请求。对话的人格会被用于 LLM 请求，并且结果将会被记录到对话中。
         '''
         return ProviderRequest(
             prompt = prompt,
@@ -320,5 +339,6 @@ class AstrMessageEvent(abc.ABC):
             image_urls = image_urls,
             func_tool = func_tool_manager,
             contexts = contexts,
-            system_prompt = system_prompt
+            system_prompt = system_prompt,
+            conversation=conversation
         )

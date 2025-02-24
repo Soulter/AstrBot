@@ -34,10 +34,19 @@ class RepoZipUpdator():
                     result = await response.json()
             if not result: 
                 return []
-            if latest:
-                ret = self.github_api_release_parser([result[0]])
-            else:
-                ret = self.github_api_release_parser(result)
+            # if latest:
+            #     ret = self.github_api_release_parser([result[0]])
+            # else:
+            #     ret = self.github_api_release_parser(result)
+            ret = []
+            for release in result:
+                ret.append({
+                    "version": release['name'],
+                    "published_at": release['published_at'],
+                    "body": release['body'],
+                    "tag_name": release['tag_name'],
+                    "zipball_url": release['zipball_url']
+                })
         except BaseException:
             raise Exception("解析版本信息失败")
         return ret
@@ -49,17 +58,10 @@ class RepoZipUpdator():
         '''
         ret = []
         for release in releases:
-            version = release['name']
-            commit_hash = ''
-            # 规范是: v3.0.7.xxxxxx，其中xxxxxx为 commit hash
-            _t = version.split(".")
-            if len(_t) == 4: 
-                commit_hash = _t[3]
             ret.append({
                 "version": release['name'],
                 "published_at": release['published_at'],
                 "body": release['body'],
-                "commit_hash": commit_hash,
                 "tag_name": release['tag_name'],
                 "zipball_url": release['zipball_url']
             })
@@ -100,7 +102,7 @@ class RepoZipUpdator():
             body=update_data[0]['body']
         )
         
-    async def download_from_repo_url(self, target_path: str, repo_url: str):
+    async def download_from_repo_url(self, target_path: str, repo_url: str, proxy=""):
         repo_namespace = repo_url.split("/")[-2:]
         author = repo_namespace[0]
         repo = repo_namespace[1]
@@ -110,19 +112,14 @@ class RepoZipUpdator():
         releases = await self.fetch_release_info(url=release_url)
         if not releases:
             # download from the default branch directly. 
-            logger.info(f"未在仓库 {author}/{repo} 中找到任何发布版本，正在从默认分支下载。")
+            logger.info(f"正在从默认分支下载 {author}/{repo} ")
             release_url = f"https://github.com/{author}/{repo}/archive/refs/heads/master.zip"
         else:
             release_url = releases[0]['zipball_url']
-            
-        # 镜像站点
-        match self.repo_mirror:
-            case 'https://github-mirror.us.kg/':
-                release_url = self.repo_mirror + release_url
-            case "https://ghp.ci/":
-                release_url = self.repo_mirror + release_url
-            case _:
-                pass
+        
+        if proxy:
+            release_url = f"{proxy}/{release_url}"
+            logger.info(f"使用代理下载: {release_url}")
 
         await download_file(release_url, target_path + ".zip")
         

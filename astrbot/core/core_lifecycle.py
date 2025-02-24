@@ -18,7 +18,7 @@ from astrbot.core.updator import AstrBotUpdator
 from astrbot.core import logger
 from astrbot.core.config.default import VERSION
 from astrbot.core.rag.knowledge_db_mgr import KnowledgeDBManager
-
+from astrbot.core.conversation_mgr import ConversationManager
 class AstrBotCoreLifecycle:
     def __init__(self, log_broker: LogBroker, db: BaseDatabase):
         self.log_broker = log_broker
@@ -27,7 +27,8 @@ class AstrBotCoreLifecycle:
         
         os.environ['https_proxy'] = self.astrbot_config['http_proxy']
         os.environ['http_proxy'] = self.astrbot_config['http_proxy']
-    
+        os.environ['no_proxy'] = 'localhost,127.0.0.1'
+        
     async def initialize(self):
         logger.info("AstrBot v"+ VERSION)
         if os.environ.get("TESTING", ""):
@@ -43,12 +44,15 @@ class AstrBotCoreLifecycle:
         
         self.knowledge_db_manager = KnowledgeDBManager(self.astrbot_config)
         
+        self.conversation_manager = ConversationManager(self.db)
+        
         self.star_context = Context(
             self.event_queue, 
             self.astrbot_config, 
             self.db,
             self.provider_manager,
             self.platform_manager,
+            self.conversation_manager,
             self.knowledge_db_manager
         )
         self.plugin_manager = PluginManager(self.star_context, self.astrbot_config)
@@ -59,9 +63,6 @@ class AstrBotCoreLifecycle:
         await self.provider_manager.initialize()
         '''根据配置实例化各个 Provider'''
         
-        await self.platform_manager.initialize()
-        '''根据配置实例化各个平台适配器'''
-
         self.pipeline_scheduler = PipelineScheduler(PipelineContext(self.astrbot_config, self.plugin_manager))
         await self.pipeline_scheduler.initialize()
         '''初始化消息事件流水线调度器'''
@@ -70,19 +71,18 @@ class AstrBotCoreLifecycle:
         self.event_bus = EventBus(self.event_queue, self.pipeline_scheduler)
         self.start_time = int(time.time())
         self.curr_tasks: List[asyncio.Task] = []
-
+        
+        await self.platform_manager.initialize()
+        '''根据配置实例化各个平台适配器'''
+        
     def _load(self):
-
-        platform_tasks = self.load_platform()
         event_bus_task = asyncio.create_task(self.event_bus.dispatch(), name="event_bus")
         
         extra_tasks = []
         for task in self.star_context._register_tasks:
             extra_tasks.append(asyncio.create_task(task, name=task.__name__))
         
-        # self.curr_tasks = [event_bus_task, *platform_tasks, *extra_tasks]
-        
-        tasks_ = [event_bus_task, *platform_tasks, *extra_tasks]
+        tasks_ = [event_bus_task, *extra_tasks]
         for task in tasks_:
             self.curr_tasks.append(asyncio.create_task(self._task_wrapper(task), name=task.get_name()))
         
