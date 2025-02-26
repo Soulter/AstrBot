@@ -119,11 +119,11 @@ class LongTermMemory:
         
         if self.enable_active_reply:
             prompt = req.prompt
-            req.prompt = f"You are now in a chatroom. The chat history is as follows:\n{chats_str}"
+            req.prompt = f"\n\nYou are now in a chatroom. The chat history is as follows:\n{chats_str}"
             req.prompt += f"\nNow, a new message is coming: `{prompt}`. Please react to it. Only output your response and do not output any other information."
             req.contexts = [] # 清空上下文，当使用了主动回复，所有聊天记录都在一个prompt中。
         else:
-            req.system_prompt += "You are now in a chatroom. The chat history is as follows: \n"
+            req.system_prompt += "\n\nYou are now in a chatroom. The chat history is as follows: \n"
             req.system_prompt += chats_str
             
     async def after_req_llm(self, event: AstrMessageEvent):

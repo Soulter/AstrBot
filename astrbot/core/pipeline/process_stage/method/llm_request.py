@@ -31,7 +31,8 @@ class LLMRequestSubStage(Stage):
         
     async def process(self, event: AstrMessageEvent, _nested: bool = False) -> Union[None, AsyncGenerator[None, None]]:
         req: ProviderRequest = None
-        
+        save_to_history = True
+
         provider = self.ctx.plugin_manager.context.get_using_provider()
         if provider is None:
             return
@@ -92,11 +93,6 @@ class LLMRequestSubStage(Stage):
                     await handler.handler(event, llm_response)
                 except BaseException:
                     logger.error(traceback.format_exc())
-            
-            # 保存到历史记录
-            await self._save_to_history(event, req, llm_response)
-            
-            await Metric.upload(llm_tick=1, model_name=provider.get_model(), provider_type=provider.meta().type)
 
             if llm_response.role == 'assistant':
                 # text completion
@@ -105,6 +101,7 @@ class LLMRequestSubStage(Stage):
             elif llm_response.role == 'err':
                 event.set_result(MessageEventResult().message(f"AstrBot 请求失败。\n错误信息: {llm_response.completion_text}"))
             elif llm_response.role == 'tool':
+                save_to_history = False
                 # function calling
                 function_calling_result = {}
                 for func_tool_name, func_tool_args in zip(llm_response.tools_call_name, llm_response.tools_call_args):
@@ -116,8 +113,6 @@ class LLMRequestSubStage(Stage):
                         async for resp in wrapper:
                             if resp is not None: # 有 return 返回
                                 function_calling_result[func_tool_name] = resp
-                            else:
-                                yield # 有生成器返回
                         event.clear_result() # 清除上一个 handler 的结果
                     except BaseException as e:
                         logger.warning(traceback.format_exc())
@@ -135,6 +130,12 @@ class LLMRequestSubStage(Stage):
                 else:
                     if llm_response.completion_text:
                         event.set_result(MessageEventResult().message(llm_response.completion_text))
+            # 保存到历史记录
+            if save_to_history:
+                await self._save_to_history(event, req, llm_response)
+
+            await Metric.upload(llm_tick=1, model_name=provider.get_model(), provider_type=provider.meta().type)
+
 
         except BaseException as e:
             logger.error(traceback.format_exc())
