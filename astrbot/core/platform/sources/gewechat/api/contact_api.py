@@ -70,7 +70,7 @@ class ContactApi:
         param = {
             "appId": app_id,
             "wxid": wxid,
-            "onlyChat": remark
+            "remark": remark
         }
         return await post_json(self.base_url, "/contacts/setFriendRemark", self.token, param)
 
