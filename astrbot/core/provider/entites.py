@@ -1,6 +1,6 @@
 import enum
 from dataclasses import dataclass, field
-from typing import List, Dict, Type
+from typing import List, Dict, Type, Awaitable
 from .func_tool_manager import FuncCall
 from openai.types.chat.chat_completion import ChatCompletion
 from astrbot.core.db.po import Conversation
@@ -42,6 +42,9 @@ class ProviderRequest():
     system_prompt: str = ""
     '''系统提示词'''
     conversation: Conversation = None
+    
+    callback: Awaitable = None
+    '''回调函数。当 LLM 返回结果后, 如果此值不为空, 会调用此函数'''
     
     def __repr__(self):
         return f"ProviderRequest(prompt={self.prompt}, session_id={self.session_id}, image_urls={self.image_urls}, func_tool={self.func_tool}, contexts={self.contexts}, system_prompt={self.system_prompt})"

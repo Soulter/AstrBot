@@ -4,7 +4,7 @@ from .astrbot_message import AstrBotMessage
 from .platform_metadata import PlatformMetadata
 from astrbot.core.message.message_event_result import MessageEventResult, MessageChain
 from astrbot.core.platform.message_type import MessageType
-from typing import List, Union
+from typing import List, Union, Awaitable
 from astrbot.core.message.components import Plain, Image, BaseMessageComponent, Face, At, AtAll, Forward
 from astrbot.core.utils.metrics import Metric
 from astrbot.core.provider.entites import ProviderRequest
@@ -317,7 +317,8 @@ class AstrMessageEvent(abc.ABC):
         image_urls: List[str] = [],
         contexts: List = [],
         system_prompt: str = "",
-        conversation: Conversation = None
+        conversation: Conversation = None,
+        callback: Awaitable = None
     ) -> ProviderRequest:
         '''
         创建一个 LLM 请求。
@@ -327,12 +328,38 @@ class AstrMessageEvent(abc.ABC):
         yield event.request_llm(prompt="hi")
         ```
         prompt: 提示词
+        
         session_id: 已经过时，留空即可
+        
         image_urls: 可以是 base64:// 或者 http:// 开头的图片链接，也可以是本地图片路径。
-        contexts: 当指定 contexts 时，将会使用 contexts 作为上下文。
+        
+        contexts: 当指定 contexts 时，将会使用 contexts 作为上下文。如果传入了 contexts 不为空并且 conversation 不为空，那么 conversation 将会被忽略。
+        
         func_tool_manager: 函数工具管理器，用于调用函数工具。用 self.context.get_llm_tool_manager() 获取。
+        
         conversation: 可选。如果指定，将在指定的对话中进行 LLM 请求。对话的人格会被用于 LLM 请求，并且结果将会被记录到对话中。
+        
+        callback: 异步的回调函数。当 LLM 返回结果后, 会 **立即** 调用此函数（在事件钩子、保存对话等任何逻辑之前）。例子：
+        
+        ```python
+        
+        @filter.command("test")
+        async def test_command(self, event: AstrMessageEvent):
+            async def llm_callback(event: AstrMessageEvent, result: LLMResponse):
+                # event.stop_event() # 支持在此终止事件传播
+                # yield event.plain_result("回调函数被调用") # 和事件钩子一样，不支持使用 yield 的方式发送消息
+                result = event.make_result().message("回调函数被调用")
+                event.set_result(result)
+                
+                                
+            yield event.request_llm(prompt="hi", callback=llm_callback)
+        
+        ```
         '''
+        
+        if len(contexts) > 0 and conversation:
+            conversation = None
+        
         return ProviderRequest(
             prompt = prompt,
             session_id = session_id,
