@@ -39,6 +39,9 @@ class LLMRequestSubStage(Stage):
         if event.get_extra("provider_request"):
             req = event.get_extra("provider_request")
             assert isinstance(req, ProviderRequest), "provider_request 必须是 ProviderRequest 类型。"
+            
+            if req.conversation:
+                req.contexts = json.loads(req.conversation.history)
         else:
             req = ProviderRequest(prompt="", image_urls=[])
             if self.provider_wake_prefix:
@@ -87,6 +90,16 @@ class LLMRequestSubStage(Stage):
             if _nested:
                 req.func_tool = None # 暂时不支持递归工具调用
             llm_response = await provider.text_chat(**req.__dict__) # 请求 LLM
+
+            if req.callback:
+                try:
+                    is_prevent_default = await req.callback(event, llm_response)
+                    if is_prevent_default or event.is_stopped():
+                        return
+                except BaseException as e:
+                    logger.error(traceback.format_exc())
+                    event.set_result(MessageEventResult().message(f"执行回调函数时发生错误: {str(e)}"))
+                    return
             
             # 执行 LLM 响应后的事件钩子。
             handlers = star_handlers_registry.get_handlers_by_event_type(EventType.OnLLMResponseEvent)
@@ -100,8 +113,7 @@ class LLMRequestSubStage(Stage):
                 if event.is_stopped():
                     logger.info(f"{star_map[handler.handler_module_path].name} - {handler.handler_name} 终止了事件传播。")
                     return
-               
-            
+
             # 保存到历史记录
             await self._save_to_history(event, req, llm_response)
             
