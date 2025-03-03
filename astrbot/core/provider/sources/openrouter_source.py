@@ -42,7 +42,7 @@ class ProviderOpenRouterOfficial(Provider):
         self.timeout = provider_config.get("timeout", 120)
         if isinstance(self.timeout, str):
             self.timeout = int(self.timeout)
-            
+
         # 使用 OpenRouter API 基础URL：https://openrouter.ai/api/v1
         self.client = AsyncOpenAI(
             api_key=self.chosen_api_key,
