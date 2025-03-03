@@ -51,6 +51,11 @@ const sidebarItem: menu[] = [
     to: '/chat'
   },
   {
+    title: '数据库',
+    icon: 'mdi-database',
+    to: '/database'
+  },
+  {
     title: '控制台',
     icon: 'mdi-console',
     to: '/console'

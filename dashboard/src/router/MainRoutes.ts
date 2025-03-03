@@ -47,6 +47,11 @@ const MainRoutes = {
       component: () => import('@/views/ConsolePage.vue')
     },
     {
+      name: 'Database',
+      path: '/database',
+      component: () => import('@/views/DatabasePage.vue')
+    },
+    {
       name: 'Project ATRI',
       path: '/project-atri',
       component: () => import('@/views/ATRIProject.vue')

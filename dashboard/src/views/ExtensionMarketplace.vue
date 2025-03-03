@@ -169,7 +169,7 @@ import { useCommonStore } from '@/stores/common';
 <script>
 
 export default {
-    name: 'ExtensionPage',
+    name: 'ExtensionMarketplacePage',
     components: {
         ExtensionCard,
         WaitingForRestart,
