@@ -120,16 +120,23 @@
                 </div>
             </div>
         </div>
+
+        <div v-if="metadata[metadataKey]?.editable && metadata[metadataKey]?.type === 'object'">
+            <!-- 可编辑键值对 -->
+            <ObjectConfigItem :object="iterable" :metadata="metadata[metadataKey].items"></ObjectConfigItem>
+        </div>
     </v-card-text>
 </template>
 
 <script>
 import { readonly } from 'vue';
 import ListConfigItem from './ListConfigItem.vue';
+import ObjectConfigItem from './ObjectConfigItem.vue';
 
 export default {
     components: {
-        ListConfigItem
+        ListConfigItem,
+        ObjectConfigItem
     },
     props: {
         metadata: Object,
