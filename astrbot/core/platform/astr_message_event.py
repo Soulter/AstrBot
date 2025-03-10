@@ -381,7 +381,10 @@ class AstrMessageEvent(abc.ABC):
         if self.platform_meta != "gewechat":
             return None
 
-        from astrbot.core.platform.sources.gewechat.gewechat_event import GewechatPlatformEvent
+        from astrbot.core.platform.sources.gewechat.gewechat_event import (
+            GewechatPlatformEvent,
+        )
+
         assert isinstance(self, GewechatPlatformEvent)
         client = self.client
 

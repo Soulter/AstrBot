@@ -471,7 +471,6 @@ class SimpleGewechatClient:
                 json_blob = await resp.json()
                 logger.debug(f"发送文件结果: {json_blob}")
 
-
     async def add_friend(self, v3: str, v4: str, content: str):
         """申请添加好友"""
         payload = {
@@ -480,18 +479,19 @@ class SimpleGewechatClient:
             "content": content,
             "v4": v4,
             "v3": v3,
-            "option": 2
+            "option": 2,
         }
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                    f"{self.base_url}/contacts/addContacts", headers=self.headers, json=payload
+                f"{self.base_url}/contacts/addContacts",
+                headers=self.headers,
+                json=payload,
             ) as resp:
                 json_blob = await resp.json()
                 logger.debug(f"申请添加好友结果: {json_blob}")
 
-
-    async def get_group(self,group_id:str):
+    async def get_group(self, group_id: str):
         payload = {
             "appId": self.appid,
             "chatroomId": group_id,
@@ -499,12 +499,14 @@ class SimpleGewechatClient:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                    f"{self.base_url}/group/getChatroomInfo", headers=self.headers, json=payload
+                f"{self.base_url}/group/getChatroomInfo",
+                headers=self.headers,
+                json=payload,
             ) as resp:
                 json_blob = await resp.json()
                 logger.debug(f"获取群信息结果: {json_blob}")
 
-    async def get_group_member(self,group_id:str):
+    async def get_group_member(self, group_id: str):
         payload = {
             "appId": self.appid,
             "chatroomId": group_id,
@@ -512,7 +514,9 @@ class SimpleGewechatClient:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                    f"{self.base_url}/group/getChatroomMemberList", headers=self.headers, json=payload
+                f"{self.base_url}/group/getChatroomMemberList",
+                headers=self.headers,
+                json=payload,
             ) as resp:
                 json_blob = await resp.json()
                 logger.debug(f"获取群信息结果: {json_blob}")

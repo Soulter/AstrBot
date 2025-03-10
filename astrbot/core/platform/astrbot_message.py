@@ -10,8 +10,9 @@ class MessageMember:
     user_id: str  # 发送者id
     nickname: str = None
 
-    #群id
+    # 群id
     group_id: str = None
+
 
 @dataclass
 class Group:
@@ -31,19 +32,20 @@ class Group:
     members: List[MessageMember] = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Group':
+    def from_dict(cls, data: Dict[str, Any]) -> "Group":
         # 提取members信息并转换为MessageMember对象
-        members = [MessageMember(user_id=member['wxid'], nickname=member['nickName']) for member in
-                   data.get('memberList', [])]
+        members = [
+            MessageMember(user_id=member["wxid"], nickname=member["nickName"])
+            for member in data.get("memberList", [])
+        ]
 
         return cls(
-            group_id=data['chatroomId'],
-            group_name=data.get('nickName'),
-            group_avatar=data.get('smallHeadImgUrl'),
-            group_owner=data.get('chatRoomOwner'),
-            members=members
+            group_id=data["chatroomId"],
+            group_name=data.get("nickName"),
+            group_avatar=data.get("smallHeadImgUrl"),
+            group_owner=data.get("chatRoomOwner"),
+            members=members,
         )
-
 
 
 class AstrBotMessage:
