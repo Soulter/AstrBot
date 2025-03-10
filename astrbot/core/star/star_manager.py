@@ -79,7 +79,7 @@ class PluginManager:
                 elif os.path.exists(os.path.join(path, d, d + ".py")):
                     module_str = d
                 else:
-                    print(f"插件 {d} 未找到 main.py 或者 {d}.py，跳过。")
+                    logger.info(f"插件 {d} 未找到 main.py 或者 {d}.py，跳过。")
                     continue
                 if os.path.exists(os.path.join(path, d, "main.py")) or os.path.exists(
                     os.path.join(path, d, d + ".py")
@@ -168,7 +168,6 @@ class PluginManager:
 
     async def reload(self, specified_plugin_name=None):
         """扫描并加载所有的插件 当 specified_module_path 指定时，重载指定插件"""
-
         specified_module_path = None
         if specified_plugin_name:
             for smd in star_registry:
@@ -207,21 +206,23 @@ class PluginManager:
                     )
 
                 await self._unbind_plugin(smd.name, specified_module_path)
-                try:
-                    del sys.modules[specified_module_path]
-                except KeyError:
-                    logger.warning(f"模块 {specified_module_path} 未载入")
+
+        return await self.load(specified_module_path)
+
+    async def load(self, specified_module_path=None, specified_dir_name=None):
+        """载入插件。
+        当 specified_module_path 或者 specified_dir_name 不为 None 时，只载入指定的插件。
+        """
+        inactivated_plugins: list = sp.get("inactivated_plugins", [])
+        inactivated_llm_tools: list = sp.get("inactivated_llm_tools", [])
+
+        alter_cmd = sp.get("alter_cmd", {})
 
         plugin_modules = self._get_plugin_modules()
         if plugin_modules is None:
             return False, "未找到任何插件模块"
 
         fail_rec = ""
-
-        inactivated_plugins: list = sp.get("inactivated_plugins", [])
-        inactivated_llm_tools: list = sp.get("inactivated_llm_tools", [])
-
-        alter_cmd = sp.get("alter_cmd", {})
 
         # 导入插件模块，并尝试实例化插件类
         for plugin_module in plugin_modules:
@@ -236,7 +237,10 @@ class PluginManager:
                 path = "data.plugins." if not reserved else "packages."
                 path += root_dir_name + "." + module_str
 
+                # 检查是否需要载入指定的插件
                 if specified_module_path and path != specified_module_path:
+                    continue
+                if specified_dir_name and root_dir_name != specified_dir_name:
                     continue
 
                 logger.info(f"正在载入插件 {root_dir_name} ...")
@@ -291,18 +295,24 @@ class PluginManager:
                     except Exception:
                         pass
 
-                    if plugin_config:
-                        metadata.config = plugin_config
-                        try:
-                            metadata.star_cls = metadata.star_cls_type(
-                                context=self.context, config=plugin_config
-                            )
-                        except TypeError as _:
+                    if path not in inactivated_plugins:
+                        # 只有没有禁用插件时才实例化插件类
+                        if plugin_config:
+                            metadata.config = plugin_config
+                            try:
+                                metadata.star_cls = metadata.star_cls_type(
+                                    context=self.context, config=plugin_config
+                                )
+                            except TypeError as _:
+                                metadata.star_cls = metadata.star_cls_type(
+                                    context=self.context
+                                )
+                        else:
                             metadata.star_cls = metadata.star_cls_type(
                                 context=self.context
                             )
                     else:
-                        metadata.star_cls = metadata.star_cls_type(context=self.context)
+                        logger.info(f"插件 {metadata.name} 已被禁用。")
 
                     metadata.module = module
                     metadata.root_dir_name = root_dir_name
@@ -335,19 +345,23 @@ class PluginManager:
                     )
                     classes = self._get_classes(module)
 
-                    if plugin_config:
-                        try:
-                            obj = getattr(module, classes[0])(
-                                context=self.context, config=plugin_config
-                            )  # 实例化插件类
-                        except TypeError as _:
+                    if path not in inactivated_plugins:
+                        # 只有没有禁用插件时才实例化插件类
+                        if plugin_config:
+                            try:
+                                obj = getattr(module, classes[0])(
+                                    context=self.context, config=plugin_config
+                                )  # 实例化插件类
+                            except TypeError as _:
+                                obj = getattr(module, classes[0])(
+                                    context=self.context
+                                )  # 实例化插件类
+                        else:
                             obj = getattr(module, classes[0])(
                                 context=self.context
                             )  # 实例化插件类
                     else:
-                        obj = getattr(module, classes[0])(
-                            context=self.context
-                        )  # 实例化插件类
+                        logger.info(f"插件 {metadata.name} 已被禁用。")
 
                     metadata = None
                     metadata = self._load_plugin_metadata(
@@ -430,7 +444,8 @@ class PluginManager:
     async def install_plugin(self, repo_url: str, proxy=""):
         plugin_path = await self.updator.install(repo_url, proxy)
         # reload the plugin
-        await self.reload()
+        dir_name = os.path.basename(plugin_path)
+        await self.load(specified_dir_name=dir_name)
         return plugin_path
 
     async def uninstall_plugin(self, plugin_name: str):
@@ -479,6 +494,11 @@ class PluginManager:
             v = star_handlers_registry.star_handlers_map[k]
             logger.debug(f"unbind handler {v.handler_name} from {plugin_name} (map)")
             del star_handlers_registry.star_handlers_map[k]
+
+        try:
+            del sys.modules[plugin_module_path]
+        except KeyError:
+            logger.warning(f"模块 {plugin_module_path} 未载入")
 
     async def update_plugin(self, plugin_name: str, proxy=""):
         """升级一个插件"""
@@ -530,6 +550,11 @@ class PluginManager:
         """终止插件，调用插件的 terminate() 和 __del__() 方法"""
         logging.info(f"正在终止插件 {star_metadata.name} ...")
 
+        if not star_metadata.activated:
+            # 说明之前已经被禁用了
+            logger.debug(f"插件 {star_metadata.name} 未被激活，不需要终止，跳过。")
+            return
+
         if hasattr(star_metadata.star_cls, "__del__"):
             asyncio.get_event_loop().run_in_executor(
                 None, star_metadata.star_cls.__del__
@@ -547,12 +572,17 @@ class PluginManager:
 
         # 启用插件启用的 llm_tool
         for func_tool in llm_tools.func_list:
-            if func_tool.handler_module_path == plugin.module_path:
+            if (
+                func_tool.handler_module_path == plugin.module_path
+                and func_tool.name in inactivated_llm_tools
+            ):
                 inactivated_llm_tools.remove(func_tool.name)
                 func_tool.active = True
         sp.put("inactivated_llm_tools", inactivated_llm_tools)
 
-        plugin.activated = True
+        await self.reload(plugin_name)
+
+        # plugin.activated = True
 
     async def install_plugin_from_file(self, zip_file_path: str):
         dir_name = os.path.basename(zip_file_path).replace(".zip", "")
@@ -565,4 +595,5 @@ class PluginManager:
             os.remove(zip_file_path)
         except BaseException as e:
             logger.warning(f"删除插件压缩包失败: {str(e)}")
-        await self.reload()
+        # await self.reload()
+        await self.load(desti_dir)

@@ -1,5 +1,5 @@
 import time
-from typing import List, Dict, Any
+from typing import List
 from dataclasses import dataclass
 from astrbot.core.message.components import BaseMessageComponent
 from .message_type import MessageType
@@ -9,41 +9,6 @@ from .message_type import MessageType
 class MessageMember:
     user_id: str  # 发送者id
     nickname: str = None
-
-    #群id
-    group_id: str = None
-
-@dataclass
-class Group:
-    group_id: str
-    group_name: str = None
-
-    # 群头像
-    group_avatar: str = None
-
-    # 群主id
-    group_owner: str = None
-
-    # 群管理员id
-    group_admin: str = None
-
-    # 群成员
-    members: List[MessageMember] = None
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Group':
-        # 提取members信息并转换为MessageMember对象
-        members = [MessageMember(user_id=member['wxid'], nickname=member['nickName']) for member in
-                   data.get('memberList', [])]
-
-        return cls(
-            group_id=data['chatroomId'],
-            group_name=data.get('nickName'),
-            group_avatar=data.get('smallHeadImgUrl'),
-            group_owner=data.get('chatRoomOwner'),
-            members=members
-        )
-
 
 
 class AstrBotMessage:

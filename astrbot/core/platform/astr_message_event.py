@@ -1,8 +1,11 @@
 import abc
+import asyncio
 from dataclasses import dataclass
-from typing import List, Union, Optional
-
-from astrbot.core.db.po import Conversation
+from .astrbot_message import AstrBotMessage
+from .platform_metadata import PlatformMetadata
+from astrbot.core.message.message_event_result import MessageEventResult, MessageChain
+from astrbot.core.platform.message_type import MessageType
+from typing import List, Union
 from astrbot.core.message.components import (
     Plain,
     Image,
@@ -12,12 +15,9 @@ from astrbot.core.message.components import (
     AtAll,
     Forward,
 )
-from astrbot.core.message.message_event_result import MessageEventResult, MessageChain
-from astrbot.core.platform.message_type import MessageType
-from astrbot.core.provider.entites import ProviderRequest
 from astrbot.core.utils.metrics import Metric
-from .astrbot_message import AstrBotMessage, Group
-from .platform_metadata import PlatformMetadata
+from astrbot.core.provider.entites import ProviderRequest
+from astrbot.core.db.po import Conversation
 
 
 @dataclass
@@ -197,7 +197,9 @@ class AstrMessageEvent(abc.ABC):
         """
         发送消息到消息平台。
         """
-        await Metric.upload(msg_event_tick=1, adapter_name=self.platform_meta.name)
+        asyncio.create_task(
+            Metric.upload(msg_event_tick=1, adapter_name=self.platform_meta.name)
+        )
         self._has_send_oper = True
 
     async def _pre_send(self):
@@ -361,32 +363,3 @@ class AstrMessageEvent(abc.ABC):
             system_prompt=system_prompt,
             conversation=conversation,
         )
-
-    async def get_group(self, group_id: str = None) -> Optional[Group]:
-        """
-        获取群聊，如果不填写group_id，且消息是私聊消息，则返回 None
-        目前只实现了 GeweChat 协议
-        """
-        # 确定有效的 group_id
-        if group_id is None:
-            group_id = self.message_obj.group_id
-
-        if group_id is None:
-            return None
-
-        # 检查平台是否为 gewechat
-        if self.platform_meta != "gewechat":
-            return None
-
-        from astrbot.core.platform.sources.gewechat.gewechat_event import GewechatPlatformEvent
-        assert isinstance(self, GewechatPlatformEvent)
-        client = self.client
-
-        # 从客户端获取群信息
-        res = await client.get_group(group_id)["data"]
-
-        # 检查 chatroomId 是否为空
-        if res["chatroomId"] == "":
-            return None
-
-        return Group.from_dict(res)

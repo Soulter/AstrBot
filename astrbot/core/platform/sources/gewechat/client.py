@@ -1,19 +1,17 @@
+import threading
 import asyncio
+import aiohttp
+import quart
 import base64
 import datetime
-import os
 import re
-import threading
-
-import aiohttp
+import os
 import anyio
-import quart
-
-from astrbot.api import logger, sp
-from astrbot.api.message_components import Plain, Image, At, Record
 from astrbot.api.platform import AstrBotMessage, MessageMember, MessageType
-from astrbot.core.utils.io import download_image_by_url
+from astrbot.api.message_components import Plain, Image, At, Record
+from astrbot.api import logger, sp
 from .downloader import GeweDownloader
+from astrbot.core.utils.io import download_image_by_url
 
 
 class SimpleGewechatClient:
@@ -188,12 +186,17 @@ class SimpleGewechatClient:
                 abm.message_str = content
             case 3:
                 # 图片消息
-                file_url = await self.multimedia_downloader.download_image(
-                    self.appid, content
-                )
-                logger.debug(f"下载图片: {file_url}")
-                file_path = await download_image_by_url(file_url)
-                abm.message.append(Image(file=file_path, url=file_path))
+                # 先看看 base64 数据
+                if "ImgBuf" in d and "buffer" in d["ImgBuf"]:
+                    logger.debug("发现图片消息包含 base64 数据，使用。")
+                    abm.message.append(Image.fromBase64(d["ImgBuf"]["buffer"]))
+                else:
+                    file_url = await self.multimedia_downloader.download_image(
+                        self.appid, content
+                    )
+                    logger.debug(f"下载图片: {file_url}")
+                    file_path = await download_image_by_url(file_url)
+                    abm.message.append(Image(file=file_path, url=file_path))
 
             case 34:
                 # 语音消息
@@ -467,48 +470,3 @@ class SimpleGewechatClient:
             ) as resp:
                 json_blob = await resp.json()
                 logger.debug(f"发送文件结果: {json_blob}")
-
-    async def add_friend(self, v3: str, v4: str, content: str):
-        """申请添加好友"""
-        payload = {
-            "appId": self.appid,
-            "scene": 3,
-            "content": content,
-            "v4": v4,
-            "v3": v3,
-            "option": 2
-        }
-
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                    f"{self.base_url}/contacts/addContacts", headers=self.headers, json=payload
-            ) as resp:
-                json_blob = await resp.json()
-                logger.debug(f"申请添加好友结果: {json_blob}")
-
-
-    async def get_group(self,group_id:str):
-        payload = {
-            "appId": self.appid,
-            "chatroomId": group_id,
-        }
-
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                    f"{self.base_url}/group/getChatroomInfo", headers=self.headers, json=payload
-            ) as resp:
-                json_blob = await resp.json()
-                logger.debug(f"获取群信息结果: {json_blob}")
-
-    async def get_group_member(self,group_id:str):
-        payload = {
-            "appId": self.appid,
-            "chatroomId": group_id,
-        }
-
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                    f"{self.base_url}/group/getChatroomMemberList", headers=self.headers, json=payload
-            ) as resp:
-                json_blob = await resp.json()
-                logger.debug(f"获取群信息结果: {json_blob}")

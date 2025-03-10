@@ -2,7 +2,7 @@
 如需修改配置，请在 `data/cmd_config.json` 中修改或者在管理面板中可视化修改。
 """
 
-VERSION = "3.4.35"
+VERSION = "3.4.37"
 DB_PATH = "data/data_v3.db"
 
 # 默认配置
@@ -36,6 +36,8 @@ DEFAULT_CONFIG = {
             "content_cleanup_rule": "",
         },
         "no_permission_reply": True,
+        "empty_mention_waiting": True,
+        "friend_message_needs_wake_prefix": False,
     },
     "provider": [],
     "provider_settings": {
@@ -158,6 +160,13 @@ CONFIG_METADATA_2 = {
                         "app_secret": "",
                         "domain": "https://open.feishu.cn",
                     },
+                    "dingtalk(钉钉)": {
+                        "id": "dingtalk",
+                        "type": "dingtalk",
+                        "enable": False,
+                        "client_id": "",
+                        "client_secret": "",
+                    },
                     "telegram": {
                         "id": "telegram",
                         "type": "telegram",
@@ -165,6 +174,7 @@ CONFIG_METADATA_2 = {
                         "telegram_token": "your_bot_token",
                         "start_message": "Hello, I'm AstrBot!",
                         "telegram_api_base_url": "https://api.telegram.org/bot",
+                        "telegram_file_base_url": "https://api.telegram.org/file/bot",
                     },
                 },
                 "items": {
@@ -255,6 +265,16 @@ CONFIG_METADATA_2 = {
                         "description": "无权限回复",
                         "type": "bool",
                         "hint": "启用后，当用户没有权限执行某个操作时，机器人会回复一条消息。",
+                    },
+                    "empty_mention_waiting": {
+                        "description": "只 @ 机器人是否触发等待回复",
+                        "type": "bool",
+                        "hint": "启用后，当消息内容只有 @ 机器人时，会触发等待回复，在 60 秒内的该用户的任意一条消息均会唤醒机器人。这在某些平台不支持 @ 和语音/图片等消息同时发送时特别有用。",
+                    },
+                    "friend_message_needs_wake_prefix": {
+                        "description": "私聊消息是否需要唤醒前缀",
+                        "type": "bool",
+                        "hint": "启用后，私聊消息需要唤醒前缀才会被处理，同群聊一样。",
                     },
                     "segmented_reply": {
                         "description": "分段回复",
@@ -636,7 +656,7 @@ CONFIG_METADATA_2 = {
                         "type": "fishaudio_tts_api",
                         "enable": False,
                         "api_key": "",
-                        "api_base": "https://api.fish-audio.cn/v1",
+                        "api_base": "https://api.fish.audio/v1",
                         "fishaudio-tts-character": "可莉",
                         "timeout": "20",
                     },

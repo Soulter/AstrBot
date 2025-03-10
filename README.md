@@ -17,6 +17,7 @@ _✨ 易上手的多平台 LLM 聊天机器人及开发框架 ✨_
 [![wakatime](https://wakatime.com/badge/user/915e5316-99c6-4563-a483-ef186cf000c9/project/018e705a-a1a7-409a-a849-3013485e6c8e.svg)](https://wakatime.com/badge/user/915e5316-99c6-4563-a483-ef186cf000c9/project/018e705a-a1a7-409a-a849-3013485e6c8e)
 ![Dynamic JSON Badge](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.soulter.top%2Fastrbot%2Fstats&query=v&label=7%E6%97%A5%E6%B6%88%E6%81%AF%E4%B8%8A%E8%A1%8C%E9%87%8F&cacheSeconds=3600)
 [![codecov](https://codecov.io/gh/Soulter/AstrBot/graph/badge.svg?token=FF3P5967B8)](https://codecov.io/gh/Soulter/AstrBot)
+[![star](https://gitcode.com/Soulter/AstrBot/star/badge.svg)](https://gitcode.com/Soulter/AstrBot)
 
 <a href="https://github.com/Soulter/AstrBot/blob/master/README_en.md">English</a> ｜
 <a href="https://github.com/Soulter/AstrBot/blob/master/README_ja.md">日本語</a> ｜
@@ -82,7 +83,8 @@ AstrBot 是一个松耦合、异步、支持多消息平台部署、具有易用
 | 微信(个人号)    | ✔    | 微信个人号私聊、群聊 | 文字、图片、语音 |
 | [Telegram](https://github.com/Soulter/astrbot_plugin_telegram)   | ✔    | 私聊、群聊 | 文字、图片 |
 | [微信(企业微信)](https://github.com/Soulter/astrbot_plugin_wecom)    | ✔    | 私聊 | 文字、图片、语音 |
-| 飞书   | ✔    | 群聊 | 文字、图片 |
+| 飞书   | ✔    | 私聊、群聊 | 文字、图片 |
+| 钉钉   | ✔    | 私聊、群聊 | 文字、图片 |
 | 微信对话开放平台 | 🚧    | 计划内 | - |
 | Discord   | 🚧    | 计划内 | - |
 | WhatsApp   | 🚧    | 计划内 | - |
