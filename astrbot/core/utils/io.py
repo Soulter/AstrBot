@@ -14,6 +14,7 @@ from PIL import Image
 
 proxy = os.environ.get("https_proxy")
 
+
 def on_error(func, path, exc_info):
     """
     a callback of the rmtree function.
@@ -147,7 +148,9 @@ async def download_file(url: str, path: str, show_progress: bool = False):
         ssl_context = ssl.create_default_context()
         ssl_context.set_ciphers("DEFAULT")
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, ssl=ssl_context, timeout=120, proxy=proxy) as resp:
+            async with session.get(
+                url, ssl=ssl_context, timeout=120, proxy=proxy
+            ) as resp:
                 total_size = int(resp.headers.get("content-length", 0))
                 downloaded_size = 0
                 start_time = time.time()
