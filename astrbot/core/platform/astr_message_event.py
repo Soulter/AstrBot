@@ -299,7 +299,9 @@ class AstrMessageEvent(abc.ABC):
         """
         return MessageEventResult().message(text)
 
-    def image_result(self, url_or_path: str, use_proxy: bool=False) -> MessageEventResult:
+    def image_result(
+        self, url_or_path: str, use_proxy: bool = False
+    ) -> MessageEventResult:
         """
         创建一个空的消息事件结果，只包含一条图片消息。
 

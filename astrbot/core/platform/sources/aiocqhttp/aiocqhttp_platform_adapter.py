@@ -212,7 +212,9 @@ class AiocqhttpAdapter(Platform):
 
                     file_name = m["data"].get("file_name", "file")
                     path = os.path.join("data/temp", file_name)
-                    await download_file(m["data"]["url"], path, use_proxy=m["data"]["use_proxy"])
+                    await download_file(
+                        m["data"]["url"], path, use_proxy=m["data"]["use_proxy"]
+                    )
 
                     m["data"] = {"file": path, "name": file_name}
                     a = ComponentTypes[t](**m["data"])  # noqa: F405

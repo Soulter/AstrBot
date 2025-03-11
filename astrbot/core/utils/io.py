@@ -75,7 +75,7 @@ def save_temp_img(img: Union[Image.Image, str, bytes]) -> str:
 
 
 async def download_image_by_url(
-        url: str, post: bool = False, post_data: dict = None, path=None, use_proxy=False
+    url: str, post: bool = False, post_data: dict = None, path=None, use_proxy=False
 ) -> str:
     """
     下载图片, 返回 path
@@ -130,8 +130,9 @@ async def download_image_by_url(
     except Exception as e:
         raise e
 
+
 async def download_file(
-        url: str, path: str, show_progress: bool = False, use_proxy: bool=False
+    url: str, path: str, show_progress: bool = False, use_proxy: bool = False
 ):
     """
     从指定 url 下载文件到指定路径 path
@@ -184,7 +185,10 @@ async def download_file(
 
         # 重新建立会话并发出请求
         async with aiohttp.ClientSession(trust_env=True) as session:
-            request_kwargs = {"timeout": aiohttp.ClientTimeout(total=120), "ssl": ssl_context}
+            request_kwargs = {
+                "timeout": aiohttp.ClientTimeout(total=120),
+                "ssl": ssl_context,
+            }
             if use_proxy and proxy:
                 request_kwargs["proxy"] = proxy
 
@@ -221,7 +225,6 @@ async def download_file(
 
     if show_progress:
         print()
-
 
 
 def file_to_base64(file_path: str) -> str:

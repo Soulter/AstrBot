@@ -128,7 +128,7 @@ class Record(BaseMessageComponent):
     timeout: T.Optional[int] = 0
     # 额外
     path: T.Optional[str]
-    use_proxy: T.Optional[bool] = False # 使用代理下载
+    use_proxy: T.Optional[bool] = False  # 使用代理下载
 
     def __init__(self, file: T.Optional[str], **_):
         for k in _.keys():
@@ -142,7 +142,7 @@ class Record(BaseMessageComponent):
         return Record(file=f"file:///{os.path.abspath(path)}", path=path, **_)
 
     @staticmethod
-    def fromURL(url: str, use_proxy: bool=False, **_):
+    def fromURL(url: str, use_proxy: bool = False, **_):
         if url.startswith("http://") or url.startswith("https://"):
             return Record(file=url, use_proxy=use_proxy, **_)
         raise Exception("not a valid url")
@@ -155,7 +155,7 @@ class Video(BaseMessageComponent):
     c: T.Optional[int] = 2
     # 额外
     path: T.Optional[str] = ""
-    use_proxy: T.Optional[bool] = False # 使用代理下载
+    use_proxy: T.Optional[bool] = False  # 使用代理下载
 
     def __init__(self, file: str, **_):
         # for k in _.keys():
@@ -168,7 +168,7 @@ class Video(BaseMessageComponent):
         return Video(file=f"file:///{os.path.abspath(path)}", path=path, **_)
 
     @staticmethod
-    def fromURL(url: str, use_proxy: bool=False, **_):
+    def fromURL(url: str, use_proxy: bool = False, **_):
         if url.startswith("http://") or url.startswith("https://"):
             return Video(file=url, use_proxy=use_proxy, **_)
         raise Exception("not a valid url")
@@ -279,7 +279,7 @@ class Image(BaseMessageComponent):
     # 额外
     path: T.Optional[str] = ""
     file_unique: T.Optional[str] = ""  # 某些平台可能有图片缓存的唯一标识
-    use_proxy: T.Optional[bool] = False # 使用代理下载
+    use_proxy: T.Optional[bool] = False  # 使用代理下载
 
     def __init__(self, file: T.Optional[str], **_):
         # for k in _.keys():
@@ -289,7 +289,7 @@ class Image(BaseMessageComponent):
         super().__init__(file=file, **_)
 
     @staticmethod
-    def fromURL(url: str, use_proxy: bool=False, **_):
+    def fromURL(url: str, use_proxy: bool = False, **_):
         if url.startswith("http://") or url.startswith("https://"):
             return Image(file=url, use_proxy=use_proxy, **_)
         raise Exception("not a valid url")
@@ -447,9 +447,9 @@ class File(BaseMessageComponent):
     type: ComponentType = "File"
     name: T.Optional[str] = ""  # 名字
     file: T.Optional[str] = ""  # url（本地路径）
-    use_proxy: T.Optional[bool] = False # 使用代理下载
+    use_proxy: T.Optional[bool] = False  # 使用代理下载
 
-    def __init__(self, name: str, file: str, use_proxy: bool=False):
+    def __init__(self, name: str, file: str, use_proxy: bool = False):
         super().__init__(name=name, file=file, use_proxy=use_proxy)
 
 
