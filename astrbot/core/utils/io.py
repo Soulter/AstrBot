@@ -131,7 +131,7 @@ async def download_image_by_url(
         raise e
 
 async def download_file(
-        url: str, path: str, show_progress: bool = False, use_proxy=False
+        url: str, path: str, show_progress: bool = False, use_proxy: bool=False
 ):
     """
     从指定 url 下载文件到指定路径 path
