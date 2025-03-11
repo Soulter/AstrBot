@@ -348,7 +348,9 @@ class Forward(BaseMessageComponent):
     def __init__(self, **_):
         super().__init__(**_)
 
+
 Node = T.ForwardRef("Node")
+
 
 class Node(BaseMessageComponent):
     """群合并转发消息"""
