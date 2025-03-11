@@ -348,10 +348,6 @@ class Forward(BaseMessageComponent):
     def __init__(self, **_):
         super().__init__(**_)
 
-
-Node = T.ForwardRef("Node")
-
-
 class Node(BaseMessageComponent):
     """群合并转发消息"""
 
@@ -363,7 +359,7 @@ class Node(BaseMessageComponent):
     seq: T.Optional[T.Union[str, list]] = ""  # 忽略
     time: T.Optional[int] = 0
 
-    def __init__(self, content: T.Union[str, list, dict, Node], **_):
+    def __init__(self, content: T.Union[str, list, dict, "Node"], **_):
         if isinstance(content, list):
             _content = ""
             for chain in content:
