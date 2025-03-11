@@ -12,6 +12,7 @@ from typing import Union
 
 from PIL import Image
 
+proxy = os.environ.get("https_proxy")
 
 def on_error(func, path, exc_info):
     """
@@ -83,7 +84,7 @@ async def download_image_by_url(
     try:
         async with aiohttp.ClientSession(trust_env=True) as session:
             if post:
-                async with session.post(url, json=post_data) as resp:
+                async with session.post(url, json=post_data, proxy=proxy) as resp:
                     if not path:
                         return save_temp_img(await resp.read())
                     else:
@@ -91,7 +92,7 @@ async def download_image_by_url(
                             f.write(await resp.read())
                         return path
             else:
-                async with session.get(url) as resp:
+                async with session.get(url, proxy=proxy) as resp:
                     if not path:
                         return save_temp_img(await resp.read())
                     else:
@@ -104,10 +105,10 @@ async def download_image_by_url(
         ssl_context.set_ciphers("DEFAULT")
         async with aiohttp.ClientSession() as session:
             if post:
-                async with session.get(url, ssl=ssl_context) as resp:
+                async with session.get(url, ssl=ssl_context, proxy=proxy) as resp:
                     return save_temp_img(await resp.read())
             else:
-                async with session.get(url, ssl=ssl_context) as resp:
+                async with session.get(url, ssl=ssl_context, proxy=proxy) as resp:
                     return save_temp_img(await resp.read())
     except Exception as e:
         raise e
@@ -119,7 +120,7 @@ async def download_file(url: str, path: str, show_progress: bool = False):
     """
     try:
         async with aiohttp.ClientSession(trust_env=True) as session:
-            async with session.get(url, timeout=1800) as resp:
+            async with session.get(url, timeout=1800, proxy=proxy) as resp:
                 if resp.status != 200:
                     raise Exception(f"下载文件失败: {resp.status}")
                 total_size = int(resp.headers.get("content-length", 0))
@@ -146,7 +147,7 @@ async def download_file(url: str, path: str, show_progress: bool = False):
         ssl_context = ssl.create_default_context()
         ssl_context.set_ciphers("DEFAULT")
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, ssl=ssl_context, timeout=120) as resp:
+            async with session.get(url, ssl=ssl_context, timeout=120, proxy=proxy) as resp:
                 total_size = int(resp.headers.get("content-length", 0))
                 downloaded_size = 0
                 start_time = time.time()
