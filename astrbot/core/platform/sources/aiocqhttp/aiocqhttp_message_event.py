@@ -59,7 +59,6 @@ class AiocqhttpMessageEvent(AstrMessageEvent):
                 if isinstance(seg, Nodes):
                     # 带有多个节点的合并转发消息
                     payload = seg.toDict()
-                    print(f"payload: {payload}")
                     if self.get_group_id():
                         payload["group_id"] = self.get_group_id()
                         await self.bot.call_action("send_group_forward_msg", **payload)
