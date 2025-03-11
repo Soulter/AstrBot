@@ -299,14 +299,14 @@ class AstrMessageEvent(abc.ABC):
         """
         return MessageEventResult().message(text)
 
-    def image_result(self, url_or_path: str) -> MessageEventResult:
+    def image_result(self, url_or_path: str, use_proxy: bool=False) -> MessageEventResult:
         """
         创建一个空的消息事件结果，只包含一条图片消息。
 
         根据开头是否包含 http 来判断是网络图片还是本地图片。
         """
         if url_or_path.startswith("http"):
-            return MessageEventResult().url_image(url_or_path)
+            return MessageEventResult().url_image(url_or_path, use_proxy)
         return MessageEventResult().file_image(url_or_path)
 
     def chain_result(self, chain: List[BaseMessageComponent]) -> MessageEventResult:

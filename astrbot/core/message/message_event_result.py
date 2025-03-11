@@ -43,7 +43,7 @@ class MessageChain:
         self.chain.append(Plain(message))
         return self
 
-    def url_image(self, url: str):
+    def url_image(self, url: str, use_proxy: bool = False):
         """添加一条图片消息（https 链接）到消息链 `chain` 中。
 
         Note:
@@ -54,7 +54,7 @@ class MessageChain:
             CommandResult().image("https://example.com/image.jpg")
 
         """
-        self.chain.append(Image.fromURL(url))
+        self.chain.append(Image.fromURL(url, use_proxy=use_proxy))
         return self
 
     def file_image(self, path: str):

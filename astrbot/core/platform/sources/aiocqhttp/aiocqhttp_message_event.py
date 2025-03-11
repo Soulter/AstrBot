@@ -25,9 +25,8 @@ class AiocqhttpMessageEvent(AstrMessageEvent):
                 # convert to base64
                 if segment.file and segment.file.startswith("file:///"):
                     bs64_data = file_to_base64(segment.file[8:])
-                    image_file_path = segment.file[8:]
                 elif segment.file and segment.file.startswith("http"):
-                    image_file_path = await download_image_by_url(segment.file)
+                    image_file_path = await download_image_by_url(segment.file, use_proxy=segment.use_proxy)
                     bs64_data = file_to_base64(image_file_path)
                 elif segment.file and segment.file.startswith("base64://"):
                     bs64_data = segment.file
@@ -58,6 +57,7 @@ class AiocqhttpMessageEvent(AstrMessageEvent):
                 if isinstance(seg, Nodes):
                     # 带有多个节点的合并转发消息
                     payload = seg.toDict()
+                    print(f"payload: {payload}")
                     if self.get_group_id():
                         payload["group_id"] = self.get_group_id()
                         await self.bot.call_action("send_group_forward_msg", **payload)
