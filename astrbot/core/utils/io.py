@@ -260,14 +260,14 @@ async def download_dashboard():
     dashboard_release_url = "https://astrbot-registry.soulter.top/download/astrbot-dashboard/latest/dist.zip"
     try:
         await download_file(
-            dashboard_release_url, "data/dashboard.zip", show_progress=True
+            dashboard_release_url, "data/dashboard.zip", show_progress=True, use_proxy=True
         )
     except BaseException as _:
         dashboard_release_url = (
             "https://github.com/Soulter/AstrBot/releases/latest/download/dist.zip"
         )
         await download_file(
-            dashboard_release_url, "data/dashboard.zip", show_progress=True
+            dashboard_release_url, "data/dashboard.zip", show_progress=True, use_proxy=True
         )
     print("解压管理面板文件中...")
     with zipfile.ZipFile("data/dashboard.zip", "r") as z:
