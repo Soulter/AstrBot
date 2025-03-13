@@ -879,7 +879,7 @@ CONFIG_METADATA_2 = {
                         "description": "启用流式回复",
                         "type": "bool",
                         "hint": "启用后，将会流式输出 LLM 的响应。目前仅支持 OpenAI API 以及 Telegram 平台，并且暂不支持工具调用(后续将更新)",
-                    }
+                    },
                 },
             },
             "persona": {

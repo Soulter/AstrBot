@@ -28,6 +28,9 @@ class LLMRequestSubStage(Stage):
         self.provider_wake_prefix = ctx.astrbot_config["provider_settings"][
             "wake_prefix"
         ]  # str
+        self.streaming_response = ctx.astrbot_config["provider_settings"][
+            "streaming_response"
+        ]
 
         for bwp in self.bot_wake_prefixs:
             if self.provider_wake_prefix.startswith(bwp):
@@ -114,7 +117,9 @@ class LLMRequestSubStage(Stage):
             logger.debug(f"提供商请求 Payload: {req}")
             if _nested:
                 req.func_tool = None  # 暂时不支持递归工具调用
-            llm_response = await provider.text_chat(**req.__dict__, stream=True)  # 请求 LLM
+            llm_response = await provider.text_chat(
+                **req.__dict__, stream=self.streaming_response
+            )  # 请求 LLM
 
             async def _post_response():
                 # 执行 LLM 响应后的事件钩子。

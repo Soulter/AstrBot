@@ -9,7 +9,6 @@ from typing import (
     TypeVar,
     AsyncIterator,
     Generic,
-    Sequence,
 )
 from .func_tool_manager import FuncCall
 from openai.types.chat.chat_completion import ChatCompletion
