@@ -1,9 +1,24 @@
 import enum
+import traceback
 from dataclasses import dataclass, field
-from typing import List, Dict, Type
+from typing import (
+    List,
+    Dict,
+    Type,
+    Awaitable,
+    TypeVar,
+    AsyncIterator,
+    Generic,
+    Sequence,
+)
 from .func_tool_manager import FuncCall
 from openai.types.chat.chat_completion import ChatCompletion
+from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
+from openai import AsyncStream
 from astrbot.core.db.po import Conversation
+from astrbot import logger
+
+T = TypeVar("T")
 
 
 class ProviderType(enum.Enum):
@@ -52,6 +67,50 @@ class ProviderRequest:
         return self.__repr__()
 
 
+class AsyncStreamWithCallback(Generic[T]):
+    """带回调函数的异步流。当结束时，会调用回调函数，以此执行一些如保存历史等的操作。"""
+
+    def __init__(self, stream: AsyncStream[ChatCompletionChunk]):
+        self.stream = stream
+        self.callback = None
+
+    def set_callback(self, callback: Awaitable):
+        self.callback = callback
+
+    async def __anext__(self) -> T:
+        return await self.stream.__anext__()
+
+    async def __aiter__(self) -> AsyncIterator[str]:
+        try:
+            async for item in self.stream:
+                chunk = item
+
+                if chunk.choices and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+                else:
+                    logger.warning(f"AsyncStreamWithCallback: {chunk}")
+        finally:
+            await self.close()
+
+    async def close(self) -> None:
+        logger.debug("AsyncStreamWithCallback: close()")
+        try:
+            if self.callback:
+                logger.debug("AsyncStreamWithCallback: calling callback")
+                await self.callback()
+        except Exception as e:
+            logger.error(traceback.format_exc())
+            logger.error(f"AsyncStreamWithCallback callback error: {e}")
+        finally:
+            return await self.stream.__aexit__(None, None, None)
+
+    async def __aenter__(self):
+        return await self.stream.__aenter__()
+
+    async def __aexit__(self, exc_type, exc, exc_tb):
+        return await self.stream.__aexit__(exc_type, exc, exc_tb)
+
+
 @dataclass
 class LLMResponse:
     role: str
@@ -62,6 +121,11 @@ class LLMResponse:
     """工具调用参数"""
     tools_call_name: List[str] = field(default_factory=list)
     """工具调用名称"""
+
+    streaming: bool = False
+    """是否流式处理, 如果 True, 则上面的所有字段为空"""
+    async_stream: AsyncStreamWithCallback[ChatCompletionChunk] = None
+    """异步流"""
 
     raw_completion: ChatCompletion = None
     _new_record: Dict[str, any] = None

@@ -53,6 +53,7 @@ class ProviderDashscope(ProviderOpenAIOfficial):
         func_tool: FuncCall = None,
         contexts: List = None,
         system_prompt: str = None,
+        stream=False,
         **kwargs,
     ) -> LLMResponse:
         # 获得会话变量

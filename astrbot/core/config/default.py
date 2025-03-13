@@ -49,6 +49,7 @@ DEFAULT_CONFIG = {
         "datetime_system_prompt": True,
         "default_personality": "default",
         "prompt_prefix": "",
+        "streaming_response": False,
     },
     "provider_stt_settings": {
         "enable": False,
@@ -874,6 +875,11 @@ CONFIG_METADATA_2 = {
                         "type": "string",
                         "hint": "添加之后，会在每次对话的 Prompt 前加上此文本。",
                     },
+                    "streaming_response": {
+                        "description": "启用流式回复",
+                        "type": "bool",
+                        "hint": "启用后，将会流式输出 LLM 的响应。目前仅支持 OpenAI API 以及 Telegram 平台，并且暂不支持工具调用(后续将更新)",
+                    }
                 },
             },
             "persona": {

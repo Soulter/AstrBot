@@ -62,6 +62,7 @@ class LLMTunerModelLoader(Provider):
         func_tool: FuncCall = None,
         contexts: List = [],
         system_prompt: str = None,
+        stream=False,
         **kwargs,
     ) -> LLMResponse:
         system_prompt = ""
