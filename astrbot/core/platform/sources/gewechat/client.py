@@ -1,17 +1,19 @@
-import threading
 import asyncio
-import aiohttp
-import quart
 import base64
 import datetime
-import re
 import os
+import re
+import threading
+
+import aiohttp
 import anyio
-from astrbot.api.platform import AstrBotMessage, MessageMember, MessageType
-from astrbot.api.message_components import Plain, Image, At, Record
+import quart
+
 from astrbot.api import logger, sp
-from .downloader import GeweDownloader
+from astrbot.api.message_components import Plain, Image, At, Record
+from astrbot.api.platform import AstrBotMessage, MessageMember, MessageType
 from astrbot.core.utils.io import download_image_by_url
+from .downloader import GeweDownloader
 
 
 class SimpleGewechatClient:
@@ -121,6 +123,12 @@ class SimpleGewechatClient:
                 return
 
         abm = AstrBotMessage()
+
+        if type_name == "ModContacts":
+            abm.type = MessageType.OTHER_MESSAGE
+            abm.raw_message = data
+            logger.debug(f"abm: {abm}")
+            return abm
 
         from_user_name = d["FromUserName"]["string"]  # 消息来源
         d["to_wxid"] = from_user_name  # 用于发信息
@@ -521,3 +529,114 @@ class SimpleGewechatClient:
             ) as resp:
                 json_blob = await resp.json()
                 logger.debug(f"发送文件结果: {json_blob}")
+
+    async def add_friend(self, v3: str, v4: str, content: str):
+        """申请添加好友"""
+        payload = {
+            "appId": self.appid,
+            "scene": 3,
+            "content": content,
+            "v4": v4,
+            "v3": v3,
+            "option": 2,
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/contacts/addContacts",
+                headers=self.headers,
+                json=payload,
+            ) as resp:
+                json_blob = await resp.json()
+                logger.debug(f"申请添加好友结果: {json_blob}")
+                return json_blob
+
+    async def get_group(self, group_id: str):
+        payload = {
+            "appId": self.appid,
+            "chatroomId": group_id,
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/group/getChatroomInfo",
+                headers=self.headers,
+                json=payload,
+            ) as resp:
+                json_blob = await resp.json()
+                logger.debug(f"获取群信息结果: {json_blob}")
+                return json_blob
+
+    async def get_group_member(self, group_id: str):
+        payload = {
+            "appId": self.appid,
+            "chatroomId": group_id,
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/group/getChatroomMemberList",
+                headers=self.headers,
+                json=payload,
+            ) as resp:
+                json_blob = await resp.json()
+                logger.debug(f"获取群信息结果: {json_blob}")
+                return json_blob
+
+    async def accept_group_invite(self, url: str):
+        """同意进群"""
+        payload = {"appId": self.appid, "url": url}
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/group/agreeJoinRoom",
+                headers=self.headers,
+                json=payload,
+            ) as resp:
+                json_blob = await resp.json()
+                logger.debug(f"获取群信息结果: {json_blob}")
+                return json_blob
+
+    async def add_group_member_to_friend(
+        self, group_id: str, to_wxid: str, content: str
+    ):
+        payload = {
+            "appId": self.appid,
+            "chatroomId": group_id,
+            "content": content,
+            "memberWxid": to_wxid,
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/group/addGroupMemberAsFriend",
+                headers=self.headers,
+                json=payload,
+            ) as resp:
+                json_blob = await resp.json()
+                logger.debug(f"获取群信息结果: {json_blob}")
+                return json_blob
+
+    async def get_user_or_group_info(self, *ids):
+        """
+        获取用户或群组信息。
+
+        :param ids: 可变数量的 wxid 参数
+        """
+
+        wxids_str = list(ids)
+
+        payload = {
+            "appId": self.appid,
+            "wxids": wxids_str,  # 使用逗号分隔的字符串
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/contacts/getDetailInfo",
+                headers=self.headers,
+                json=payload,
+            ) as resp:
+                json_blob = await resp.json()
+                logger.debug(f"获取群信息结果: {json_blob}")
+                return json_blob
