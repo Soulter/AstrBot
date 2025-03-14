@@ -58,6 +58,7 @@ class ProviderDify(Provider):
         func_tool: FuncCall = None,
         contexts: List = None,
         system_prompt: str = None,
+        stream=False,
         **kwargs,
     ) -> LLMResponse:
         result = ""

@@ -28,6 +28,9 @@ class LLMRequestSubStage(Stage):
         self.provider_wake_prefix = ctx.astrbot_config["provider_settings"][
             "wake_prefix"
         ]  # str
+        self.streaming_response = ctx.astrbot_config["provider_settings"][
+            "streaming_response"
+        ]
 
         for bwp in self.bot_wake_prefixs:
             if self.provider_wake_prefix.startswith(bwp):
@@ -114,37 +117,51 @@ class LLMRequestSubStage(Stage):
             logger.debug(f"提供商请求 Payload: {req}")
             if _nested:
                 req.func_tool = None  # 暂时不支持递归工具调用
-            llm_response = await provider.text_chat(**req.__dict__)  # 请求 LLM
+            llm_response = await provider.text_chat(
+                **req.__dict__, stream=self.streaming_response
+            )  # 请求 LLM
 
-            # 执行 LLM 响应后的事件钩子。
-            handlers = star_handlers_registry.get_handlers_by_event_type(
-                EventType.OnLLMResponseEvent
-            )
-            for handler in handlers:
-                try:
-                    logger.debug(
-                        f"hook(on_llm_response) -> {star_map[handler.handler_module_path].name} - {handler.handler_name}"
-                    )
-                    await handler.handler(event, llm_response)
-                except BaseException:
-                    logger.error(traceback.format_exc())
-
-                if event.is_stopped():
-                    logger.info(
-                        f"{star_map[handler.handler_module_path].name} - {handler.handler_name} 终止了事件传播。"
-                    )
-                    return
-
-            # 保存到历史记录
-            await self._save_to_history(event, req, llm_response)
-
-            asyncio.create_task(
-                Metric.upload(
-                    llm_tick=1,
-                    model_name=provider.get_model(),
-                    provider_type=provider.meta().type,
+            async def _post_response():
+                # 执行 LLM 响应后的事件钩子。
+                handlers = star_handlers_registry.get_handlers_by_event_type(
+                    EventType.OnLLMResponseEvent
                 )
-            )
+                for handler in handlers:
+                    try:
+                        logger.debug(
+                            f"hook(on_llm_response) -> {star_map[handler.handler_module_path].name} - {handler.handler_name}"
+                        )
+                        await handler.handler(event, llm_response)
+                    except BaseException:
+                        logger.error(traceback.format_exc())
+
+                    if event.is_stopped():
+                        logger.info(
+                            f"{star_map[handler.handler_module_path].name} - {handler.handler_name} 终止了事件传播。"
+                        )
+                        return
+
+                # 保存到历史记录
+                await self._save_to_history(event, req, llm_response)
+
+                asyncio.create_task(
+                    Metric.upload(
+                        llm_tick=1,
+                        model_name=provider.get_model(),
+                        provider_type=provider.meta().type,
+                    )
+                )
+
+            if llm_response.streaming:
+                llm_response.async_stream.set_callback(_post_response)
+                event.set_result(
+                    MessageEventResult()
+                    .set_async_stream(llm_response.async_stream)
+                    .set_result_content_type(ResultContentType.STREAMING_RESULT)
+                )
+                return
+            else:
+                await _post_response()
 
             if llm_response.role == "assistant":
                 # text completion

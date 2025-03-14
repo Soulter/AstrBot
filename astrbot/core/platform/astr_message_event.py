@@ -5,7 +5,7 @@ from .astrbot_message import AstrBotMessage
 from .platform_metadata import PlatformMetadata
 from astrbot.core.message.message_event_result import MessageEventResult, MessageChain
 from astrbot.core.platform.message_type import MessageType
-from typing import List, Union
+from typing import List, Union, AsyncIterator
 from astrbot.core.message.components import (
     Plain,
     Image,
@@ -204,6 +204,16 @@ class AstrMessageEvent(abc.ABC):
     async def send(self, message: MessageChain):
         """
         发送消息到消息平台。
+        """
+        asyncio.create_task(
+            Metric.upload(msg_event_tick=1, adapter_name=self.platform_meta.name)
+        )
+        self._has_send_oper = True
+
+    async def send_streaming(self, iter: AsyncIterator[str]):
+        """发送流式消息到消息平台，使用异步迭代器。
+
+        目前仅支持: telegram。
         """
         asyncio.create_task(
             Metric.upload(msg_event_tick=1, adapter_name=self.platform_meta.name)

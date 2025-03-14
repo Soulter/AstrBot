@@ -3,7 +3,7 @@ import json
 import os
 import inspect
 
-from openai import AsyncOpenAI, AsyncAzureOpenAI
+from openai import AsyncOpenAI, AsyncAzureOpenAI, AsyncStream
 from openai.types.chat.chat_completion import ChatCompletion
 from openai._exceptions import NotFoundError, UnprocessableEntityError
 from astrbot.core.utils.io import download_image_by_url
@@ -14,7 +14,7 @@ from astrbot import logger
 from astrbot.core.provider.func_tool_manager import FuncCall
 from typing import List
 from ..register import register_provider_adapter
-from astrbot.core.provider.entites import LLMResponse
+from astrbot.core.provider.entites import LLMResponse, AsyncStreamWithCallback
 
 
 @register_provider_adapter(
@@ -95,10 +95,16 @@ class ProviderOpenAIOfficial(Provider):
             del payloads[key]
 
         completion = await self.client.chat.completions.create(
-            **payloads, stream=False, extra_body=extra_body
+            **payloads, extra_body=extra_body
         )
 
-        if not isinstance(completion, ChatCompletion):
+        if isinstance(completion, AsyncStream):
+            return LLMResponse(
+                "assistant",
+                streaming=True,
+                async_stream=AsyncStreamWithCallback(completion),
+            )
+        elif not isinstance(completion, ChatCompletion):
             raise Exception(
                 f"API 返回的 completion 类型错误：{type(completion)}: {completion}。"
             )
@@ -151,6 +157,7 @@ class ProviderOpenAIOfficial(Provider):
         func_tool: FuncCall = None,
         contexts=[],
         system_prompt=None,
+        stream=False,
         **kwargs,
     ) -> LLMResponse:
         new_record = await self.assemble_context(prompt, image_urls)
@@ -165,7 +172,7 @@ class ProviderOpenAIOfficial(Provider):
         model_config = self.provider_config.get("model_config", {})
         model_config["model"] = self.get_model()
 
-        payloads = {"messages": context_query, **model_config}
+        payloads = {"messages": context_query, "stream": stream, **model_config}
         llm_response = None
         try:
             llm_response = await self._query(payloads, func_tool)

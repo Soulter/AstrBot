@@ -1,8 +1,10 @@
+import asyncio
 from astrbot.api.event import AstrMessageEvent, MessageChain
 from astrbot.api.platform import AstrBotMessage, PlatformMetadata, MessageType
 from astrbot.api.message_components import Plain, Image, Reply, At, File, Record
 from telegram.ext import ExtBot
 from astrbot.core.utils.io import download_file
+from astrbot import logger
 
 
 class TelegramPlatformEvent(AstrMessageEvent):
@@ -20,7 +22,6 @@ class TelegramPlatformEvent(AstrMessageEvent):
     @staticmethod
     async def send_with_client(client: ExtBot, message: MessageChain, user_name: str):
         image_path = None
-
         has_reply = False
         reply_message_id = None
         at_user_id = None
@@ -36,15 +37,15 @@ class TelegramPlatformEvent(AstrMessageEvent):
         if "#" in user_name:
             # it's a supergroup chat with message_thread_id
             user_name, message_thread_id = user_name.split("#")
+        payload = {
+            "chat_id": user_name,
+        }
+        if message_thread_id:
+            payload["message_thread_id"] = message_thread_id
+
         for i in message.chain:
-            payload = {
-                "chat_id": user_name,
-            }
             if has_reply:
                 payload["reply_to_message_id"] = reply_message_id
-            if message_thread_id:
-                payload["reply_to_message_id"] = message_thread_id
-
             if isinstance(i, Plain):
                 if at_user_id and not at_flag:
                     i.text = f"@{at_user_id} " + i.text
@@ -80,3 +81,63 @@ class TelegramPlatformEvent(AstrMessageEvent):
         else:
             await self.send_with_client(self.client, message, self.get_sender_id())
         await super().send(message)
+
+    async def send_streaming(self, iter):
+        message_thread_id = None
+
+        if self.get_message_type() == MessageType.GROUP_MESSAGE:
+            user_name = self.message_obj.group_id
+        else:
+            user_name = self.get_sender_id()
+
+        if "#" in user_name:
+            # it's a supergroup chat with message_thread_id
+            user_name, message_thread_id = user_name.split("#")
+        payload = {
+            "chat_id": user_name,
+        }
+        if message_thread_id:
+            payload["reply_to_message_id"] = message_thread_id
+
+        delta = ""
+        message_id = None
+        last_edit_time = 0  # 上次编辑消息的时间
+        throttle_interval = 0.6  # 编辑消息的间隔时间 (秒)
+
+        async for i in iter:
+            if isinstance(i, str):
+                delta += i
+                if not message_id:
+                    try:
+                        msg = await self.client.send_message(text=delta, **payload)
+                    except Exception as e:
+                        logger.warning(f"发送消息失败(streaming): {e}")
+                    message_id = msg.message_id
+                    last_edit_time = (
+                        asyncio.get_event_loop().time()
+                    )  # 记录初始消息发送时间
+                else:
+                    current_time = asyncio.get_event_loop().time()
+                    time_since_last_edit = current_time - last_edit_time
+
+                    # 如果距离上次编辑的时间 >= 设定的间隔，等待一段时间
+                    if time_since_last_edit >= throttle_interval:
+                        # 编辑消息
+                        try:
+                            await self.client.edit_message_text(
+                                text=delta,
+                                chat_id=payload["chat_id"],
+                                message_id=message_id,
+                            )
+                        except Exception as e:
+                            logger.warning(f"编辑消息失败(streaming): {e}")
+                        last_edit_time = (
+                            asyncio.get_event_loop().time()
+                        )  # 更新上次编辑的时间
+
+        if delta:
+            await self.client.edit_message_text(
+                text=delta, chat_id=payload["chat_id"], message_id=message_id
+            )
+
+        return await super().send_streaming(iter)

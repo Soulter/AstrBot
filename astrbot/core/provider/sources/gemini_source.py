@@ -186,6 +186,7 @@ class ProviderGoogleGenAI(Provider):
         func_tool: FuncCall = None,
         contexts=[],
         system_prompt=None,
+        stream=False,
         **kwargs,
     ) -> LLMResponse:
         new_record = await self.assemble_context(prompt, image_urls)
