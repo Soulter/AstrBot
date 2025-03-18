@@ -702,7 +702,7 @@ UID: {user_id} 此 ID 可用于设置管理员。
         )
 
     @filter.command("newgroup")
-    async def newgroup_conv(self, message: AstrMessageEvent, sid:str):
+    async def newgroup_conv(self, message: AstrMessageEvent, sid: str):
         """创建新群聊对话"""
         provider = self.context.get_using_provider()
         if provider and provider.meta().type == "dify":
@@ -713,20 +713,22 @@ UID: {user_id} 此 ID 可用于设置管理员。
             )
             return
         if sid:
-            session = str(MessageSesion(
-                platform_name= message.platform_meta.name,
-                message_type=MessageType("GroupMessage"),
-                session_id=sid,
-            ))
-            cid = await self.context.conversation_manager.new_conversation(
-                session
+            session = str(
+                MessageSesion(
+                    platform_name=message.platform_meta.name,
+                    message_type=MessageType("GroupMessage"),
+                    session_id=sid,
+                )
             )
+            cid = await self.context.conversation_manager.new_conversation(session)
             message.set_result(
-                MessageEventResult().message(f"群聊 {session} 已切换到新对话: 新对话({cid[:4]})。")
+                MessageEventResult().message(
+                    f"群聊 {session} 已切换到新对话: 新对话({cid[:4]})。"
+                )
             )
         else:
             message.set_result(
-                MessageEventResult().message("请输入群聊 ID。/newgroup 群聊ID。")  
+                MessageEventResult().message("请输入群聊 ID。/newgroup 群聊ID。")
             )
 
     @filter.command("switch")
