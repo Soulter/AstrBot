@@ -7,6 +7,8 @@ import astrbot.api.event.filter as filter
 from astrbot.api.event import AstrMessageEvent, MessageEventResult
 from astrbot.api import sp
 from astrbot.api.provider import ProviderRequest
+from astrbot.core.platform.astr_message_event import MessageSesion
+from astrbot.core.platform.message_type import MessageType
 from astrbot.core.provider.sources.dify_source import ProviderDify
 from astrbot.core.utils.io import download_dashboard, get_dashboard_version
 from astrbot.core.star.star_handler import star_handlers_registry, StarHandlerMetadata
@@ -17,7 +19,7 @@ from astrbot.core.star.filter.permission import PermissionTypeFilter
 from astrbot.core.config.default import VERSION
 from .long_term_memory import LongTermMemory
 from astrbot.core import logger
-from astrbot.api.message_components import Plain, Image, Reply
+from astrbot.api.message_components import Plain, Image
 
 from typing import Union
 
@@ -88,6 +90,7 @@ class Main(star.Star):
 /model: 模型列表
 /ls: 对话列表
 /new: 创建新对话
+/newgroup 群号: 为群聊创建新对话
 /switch 序号: 切换对话
 /rename 新名字: 重命名当前对话
 /del: 删除当前会话对话(op)
@@ -287,7 +290,7 @@ UID: {user_id} 此 ID 可用于设置管理员。
                 )
             )
             return
-        self.context.get_config()["admins_id"].append(str(admin_id))
+        self.context.get_config()["admins_id"].append(admin_id)
         self.context.get_config().save_config()
         event.set_result(MessageEventResult().message("授权成功。"))
 
@@ -296,7 +299,7 @@ UID: {user_id} 此 ID 可用于设置管理员。
     async def deop(self, event: AstrMessageEvent, admin_id: str):
         """取消授权管理员。deop <admin_id>"""
         try:
-            self.context.get_config()["admins_id"].remove(str(admin_id))
+            self.context.get_config()["admins_id"].remove(admin_id)
             self.context.get_config().save_config()
             event.set_result(MessageEventResult().message("取消授权成功。"))
         except ValueError:
@@ -314,7 +317,7 @@ UID: {user_id} 此 ID 可用于设置管理员。
                     "使用方法: /wl <id> 添加白名单；/dwl <id> 删除白名单。可通过 /sid 获取 ID。"
                 )
             )
-        self.context.get_config()["platform_settings"]["id_whitelist"].append(str(sid))
+        self.context.get_config()["platform_settings"]["id_whitelist"].append(sid)
         self.context.get_config().save_config()
         event.set_result(MessageEventResult().message("添加白名单成功。"))
 
@@ -323,7 +326,7 @@ UID: {user_id} 此 ID 可用于设置管理员。
     async def dwl(self, event: AstrMessageEvent, sid: str):
         """删除白名单。dwl <sid>"""
         try:
-            self.context.get_config()["platform_settings"]["id_whitelist"].remove(str(sid))
+            self.context.get_config()["platform_settings"]["id_whitelist"].remove(sid)
             self.context.get_config().save_config()
             event.set_result(MessageEventResult().message("删除白名单成功。"))
         except ValueError:
@@ -697,6 +700,34 @@ UID: {user_id} 此 ID 可用于设置管理员。
         message.set_result(
             MessageEventResult().message(f"切换到新对话: 新对话({cid[:4]})。")
         )
+
+    @filter.command("newgroup")
+    async def newgroup_conv(self, message: AstrMessageEvent, sid:str):
+        """创建新群聊对话"""
+        provider = self.context.get_using_provider()
+        if provider and provider.meta().type == "dify":
+            assert isinstance(provider, ProviderDify)
+            await provider.forget(message.unified_msg_origin)
+            message.set_result(
+                MessageEventResult().message("成功，下次聊天将是新对话。")
+            )
+            return
+        if sid:
+            session = str(MessageSesion(
+                platform_name= message.platform_meta.name,
+                message_type=MessageType("GroupMessage"),
+                session_id=sid,
+            ))
+            cid = await self.context.conversation_manager.new_conversation(
+                session
+            )
+            message.set_result(
+                MessageEventResult().message(f"群聊 {session} 已切换到新对话: 新对话({cid[:4]})。")
+            )
+        else:
+            message.set_result(
+                MessageEventResult().message("请输入群聊 ID。/newgroup 群聊ID。")  
+            )
 
     @filter.command("switch")
     async def switch_conv(self, message: AstrMessageEvent, index: int = None):
@@ -1088,16 +1119,11 @@ UID: {user_id} 此 ID 可用于设置管理员。
 
     @filter.on_llm_request()
     async def decorate_llm_req(self, event: AstrMessageEvent, req: ProviderRequest):
-        """在请求 LLM 前注入人格信息、Identifier、时间、回复内容等 System Prompt"""
+        """在请求 LLM 前注入人格信息、Identifier、时间等 System Prompt"""
+        logger.debug(req.conversation)
+
         if self.prompt_prefix:
             req.prompt = self.prompt_prefix + req.prompt
-
-        # 解析引用内容
-        quote = None
-        for comp in event.message_obj.message:
-            if isinstance(comp, Reply):
-                quote = comp
-                break
 
         if self.identifier:
             user_id = event.message_obj.sender.user_id
@@ -1133,13 +1159,6 @@ UID: {user_id} 此 ID 可用于设置管理员。
                     req.system_prompt += mood_dialogs
                 if begin_dialogs := persona["_begin_dialogs_processed"]:
                     req.contexts[:0] = begin_dialogs
-
-        if quote and quote.message_str:
-            if quote.sender_nickname:
-                sender_info = f"(Sent by {quote.sender_nickname})"
-            else:
-                sender_info = ""
-            req.system_prompt += f"\nUser is quoting the message{sender_info}: {quote.message_str}, please consider the context."
 
         if self.ltm:
             try:
