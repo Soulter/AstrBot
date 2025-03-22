@@ -15,7 +15,6 @@ from ..filter.regex import RegexFilter
 from typing import Awaitable
 from astrbot.core.provider.func_tool_manager import SUPPORTED_TYPES
 from astrbot.core.provider.register import llm_tools
-from astrbot.core import logger
 
 
 def get_handler_full_name(awaitable: Awaitable) -> str:
@@ -359,7 +358,9 @@ def register_llm_tool(name: str = None):
                 }
             )
         md = get_handler_or_create(awaitable, EventType.OnCallingFuncToolEvent)
-        llm_tools.add_func(llm_tool_name, args, docstring.description, md.handler)
+        llm_tools.add_func(
+            llm_tool_name, args, docstring.description.strip(), md.handler
+        )
         return awaitable
 
     return decorator

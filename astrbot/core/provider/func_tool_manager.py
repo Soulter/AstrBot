@@ -4,6 +4,7 @@ from typing import Dict, List, Awaitable
 from dataclasses import dataclass
 from astrbot import logger
 
+
 @dataclass
 class FuncTool:
     """
@@ -72,7 +73,7 @@ class FuncCall:
             handler=handler,
         )
         self.func_list.append(_func)
-        logger.info(f"添加了函数调用工具({len(self.func_list)}): {name} - {desc}")
+        logger.info(f"添加函数调用工具: {name}")
 
     def remove_func(self, name: str) -> None:
         """

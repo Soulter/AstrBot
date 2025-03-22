@@ -70,11 +70,10 @@ const viewHandlers = () => {
         <p class="text-h3 font-weight-black" :class="{ 'text-h4': $vuetify.display.xs }">
           {{ extension.name }}
           <v-tooltip location="top" v-if="extension?.has_update && !marketMode">
-            P
             <template v-slot:activator="{ props: tooltipProps }">
               <v-icon v-bind="tooltipProps" color="warning" class="ml-2" icon="mdi-update" size="small"></v-icon>
             </template>
-            <span>有新版本可用: {{ extension.online_version }} {{ extension }}</span>
+            <span>有新版本可用: {{ extension.online_version }}</span>
           </v-tooltip>
           <v-tooltip location="top" v-if="!extension.activated && !marketMode">
             <template v-slot:activator="{ props: tooltipProps }">
@@ -99,7 +98,7 @@ const viewHandlers = () => {
           </v-chip>
         </div>
 
-        <div class="mt-2" :class="{ 'text-caption': $vuetify.display.xs }">
+        <div class="mt-2" :class="{ 'text-caption': $vuetify.display.xs }" style="max-height: 65px; overflow-y: auto;">
           {{ extension.desc }}
         </div>
       </div>

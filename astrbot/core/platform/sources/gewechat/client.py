@@ -1,17 +1,19 @@
-import threading
 import asyncio
-import aiohttp
-import quart
 import base64
 import datetime
-import re
 import os
+import re
+import threading
+
+import aiohttp
 import anyio
-from astrbot.api.platform import AstrBotMessage, MessageMember, MessageType
-from astrbot.api.message_components import Plain, Image, At, Record
+import quart
+
 from astrbot.api import logger, sp
-from .downloader import GeweDownloader
+from astrbot.api.message_components import Plain, Image, At, Record
+from astrbot.api.platform import AstrBotMessage, MessageMember, MessageType
 from astrbot.core.utils.io import download_image_by_url
+from .downloader import GeweDownloader
 
 
 class SimpleGewechatClient:
@@ -51,11 +53,11 @@ class SimpleGewechatClient:
 
         self.server = quart.Quart(__name__)
         self.server.add_url_rule(
-            "/astrbot-gewechat/callback", view_func=self.callback, methods=["POST"]
+            "/astrbot-gewechat/callback", view_func=self._callback, methods=["POST"]
         )
         self.server.add_url_rule(
             "/astrbot-gewechat/file/<file_id>",
-            view_func=self.handle_file,
+            view_func=self._handle_file,
             methods=["GET"],
         )
 
@@ -73,6 +75,7 @@ class SimpleGewechatClient:
         self.stop = False
 
     async def get_token_id(self):
+        """获取 Gewechat Token。"""
         async with aiohttp.ClientSession() as session:
             async with session.post(f"{self.base_url}/tools/getTokenId") as resp:
                 json_blob = await resp.json()
@@ -87,6 +90,15 @@ class SimpleGewechatClient:
             type_name = data["type_name"]
         else:
             raise Exception("无法识别的消息类型")
+
+        # 以下没有业务处理，只是避免控制台打印太多的日志
+        if type_name == "ModContacts":
+            logger.info("gewechat下发：ModContacts消息通知。")
+            return
+        if type_name == "DelContacts":
+            logger.info("gewechat下发：DelContacts消息通知。")
+            return
+
         if type_name == "Offline":
             logger.critical("收到 gewechat 下线通知。")
             return
@@ -183,6 +195,11 @@ class SimpleGewechatClient:
         abm.sender = MessageMember(user_id, user_real_name)
         abm.raw_message = d
         abm.message_str = ""
+
+        if user_id == "weixin":
+            # 忽略微信团队消息
+            return
+
         # 不同消息类型
         match d["MsgType"]:
             case 1:
@@ -212,6 +229,31 @@ class SimpleGewechatClient:
                     async with await anyio.open_file(file_path, "wb") as f:
                         await f.write(voice_data)
                     abm.message.append(Record(file=file_path, url=file_path))
+
+            # 以下已知消息类型，没有业务处理，只是避免控制台打印太多的日志
+            case 37:  # 好友申请
+                logger.info("消息类型(37)：好友申请")
+            case 42:  # 名片
+                logger.info("消息类型(42)：名片")
+            case 43:  # 视频
+                logger.info("消息类型(43)：视频")
+            case 47:  # emoji
+                logger.info("消息类型(47)：emoji")
+            case 48:  # 地理位置
+                logger.info("消息类型(48)：地理位置")
+            case 49:  # 公众号/文件/小程序/引用/转账/红包/视频号/群聊邀请
+                logger.info(
+                    "消息类型(49)：公众号/文件/小程序/引用/转账/红包/视频号/群聊邀请"
+                )
+            case 51:  # 帐号消息同步?
+                logger.info("消息类型(51)：帐号消息同步？")
+            case 10000:  # 被踢出群聊/更换群主/修改群名称
+                logger.info("消息类型(10000)：被踢出群聊/更换群主/修改群名称")
+            case 10002:  # 撤回/拍一拍/成员邀请/被移出群聊/解散群聊/群公告/群待办
+                logger.info(
+                    "消息类型(10002)：撤回/拍一拍/成员邀请/被移出群聊/解散群聊/群公告/群待办"
+                )
+
             case _:
                 logger.info(f"未实现的消息类型: {d['MsgType']}")
                 abm.raw_message = d
@@ -219,7 +261,7 @@ class SimpleGewechatClient:
         logger.debug(f"abm: {abm}")
         return abm
 
-    async def callback(self):
+    async def _callback(self):
         data = await quart.request.json
         logger.debug(f"收到 gewechat 回调: {data}")
 
@@ -241,7 +283,7 @@ class SimpleGewechatClient:
 
         return quart.jsonify({"r": "AstrBot ACK"})
 
-    async def handle_file(self, file_id):
+    async def _handle_file(self, file_id):
         file_path = f"data/temp/{file_id}"
         return await quart.send_file(file_path)
 
@@ -267,17 +309,17 @@ class SimpleGewechatClient:
         await self.server.run_task(
             host="0.0.0.0",
             port=self.port,
-            shutdown_trigger=self.shutdown_trigger_placeholder,
+            shutdown_trigger=self._shutdown_trigger_placeholder,
         )
 
-    async def shutdown_trigger_placeholder(self):
+    async def _shutdown_trigger_placeholder(self):
         # TODO: use asyncio.Event
         while not self.event_queue.closed and not self.stop:  # noqa: ASYNC110
             await asyncio.sleep(1)
         logger.info("gewechat 适配器已关闭。")
 
     async def check_online(self, appid: str):
-        # /login/checkOnline
+        """检查 APPID 对应的设备是否在线。"""
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 f"{self.base_url}/login/checkOnline",
@@ -288,6 +330,7 @@ class SimpleGewechatClient:
                 return json_blob["data"]
 
     async def logout(self):
+        """登出 gewechat。"""
         if self.appid:
             online = await self.check_online(self.appid)
             if online:
@@ -301,6 +344,7 @@ class SimpleGewechatClient:
                         logger.info(f"登出结果: {json_blob}")
 
     async def login(self):
+        """登录 gewechat。一般来说插件用不到这个方法。"""
         if self.token is None:
             await self.get_token_id()
 
@@ -412,9 +456,18 @@ class SimpleGewechatClient:
             self.appid = appid
             logger.info(f"已保存 APPID: {appid}")
 
-    """API"""
+    """API 部分。Gewechat 的 API 文档请参考: https://apifox.com/apidoc/shared/69ba62ca-cb7d-437e-85e4-6f3d3df271b1
+    """
 
-    async def get_chatroom_member_list(self, chatroom_wxid: str):
+    async def get_chatroom_member_list(self, chatroom_wxid: str) -> dict:
+        """获取群成员列表。
+
+        Args:
+            chatroom_wxid (str): 微信群聊的id。可以通过 event.get_group_id() 获取。
+
+        Returns:
+            dict: 返回群成员列表字典。其中键为 memberList 的值为群成员列表。
+        """
         payload = {"appId": self.appid, "chatroomId": chatroom_wxid}
 
         async with aiohttp.ClientSession() as session:
@@ -427,6 +480,7 @@ class SimpleGewechatClient:
                 return json_blob["data"]
 
     async def post_text(self, to_wxid, content: str, ats: str = ""):
+        """发送纯文本消息"""
         payload = {
             "appId": self.appid,
             "toWxid": to_wxid,
@@ -443,6 +497,7 @@ class SimpleGewechatClient:
                 logger.debug(f"发送消息结果: {json_blob}")
 
     async def post_image(self, to_wxid, image_url: str):
+        """发送图片消息"""
         payload = {
             "appId": self.appid,
             "toWxid": to_wxid,
@@ -457,6 +512,12 @@ class SimpleGewechatClient:
                 logger.debug(f"发送图片结果: {json_blob}")
 
     async def post_voice(self, to_wxid, voice_url: str, voice_duration: int):
+        """发送语音信息
+
+        Args:
+            voice_url (str): 语音文件的网络链接
+            voice_duration (int): 语音时长，毫秒
+        """
         payload = {
             "appId": self.appid,
             "toWxid": to_wxid,
@@ -474,6 +535,13 @@ class SimpleGewechatClient:
                 logger.debug(f"发送语音结果: {json_blob}")
 
     async def post_file(self, to_wxid, file_url: str, file_name: str):
+        """发送文件
+
+        Args:
+            to_wxid (string): 微信ID
+            file_url (str): 文件的网络链接
+            file_name (str): 文件名
+        """
         payload = {
             "appId": self.appid,
             "toWxid": to_wxid,
@@ -487,3 +555,114 @@ class SimpleGewechatClient:
             ) as resp:
                 json_blob = await resp.json()
                 logger.debug(f"发送文件结果: {json_blob}")
+
+    async def add_friend(self, v3: str, v4: str, content: str):
+        """申请添加好友"""
+        payload = {
+            "appId": self.appid,
+            "scene": 3,
+            "content": content,
+            "v4": v4,
+            "v3": v3,
+            "option": 2,
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/contacts/addContacts",
+                headers=self.headers,
+                json=payload,
+            ) as resp:
+                json_blob = await resp.json()
+                logger.debug(f"申请添加好友结果: {json_blob}")
+                return json_blob
+
+    async def get_group(self, group_id: str):
+        payload = {
+            "appId": self.appid,
+            "chatroomId": group_id,
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/group/getChatroomInfo",
+                headers=self.headers,
+                json=payload,
+            ) as resp:
+                json_blob = await resp.json()
+                logger.debug(f"获取群信息结果: {json_blob}")
+                return json_blob
+
+    async def get_group_member(self, group_id: str):
+        payload = {
+            "appId": self.appid,
+            "chatroomId": group_id,
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/group/getChatroomMemberList",
+                headers=self.headers,
+                json=payload,
+            ) as resp:
+                json_blob = await resp.json()
+                logger.debug(f"获取群信息结果: {json_blob}")
+                return json_blob
+
+    async def accept_group_invite(self, url: str):
+        """同意进群"""
+        payload = {"appId": self.appid, "url": url}
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/group/agreeJoinRoom",
+                headers=self.headers,
+                json=payload,
+            ) as resp:
+                json_blob = await resp.json()
+                logger.debug(f"获取群信息结果: {json_blob}")
+                return json_blob
+
+    async def add_group_member_to_friend(
+        self, group_id: str, to_wxid: str, content: str
+    ):
+        payload = {
+            "appId": self.appid,
+            "chatroomId": group_id,
+            "content": content,
+            "memberWxid": to_wxid,
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/group/addGroupMemberAsFriend",
+                headers=self.headers,
+                json=payload,
+            ) as resp:
+                json_blob = await resp.json()
+                logger.debug(f"获取群信息结果: {json_blob}")
+                return json_blob
+
+    async def get_user_or_group_info(self, *ids):
+        """
+        获取用户或群组信息。
+
+        :param ids: 可变数量的 wxid 参数
+        """
+
+        wxids_str = list(ids)
+
+        payload = {
+            "appId": self.appid,
+            "wxids": wxids_str,  # 使用逗号分隔的字符串
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.base_url}/contacts/getDetailInfo",
+                headers=self.headers,
+                json=payload,
+            ) as resp:
+                json_blob = await resp.json()
+                logger.debug(f"获取群信息结果: {json_blob}")
+                return json_blob
