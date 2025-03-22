@@ -1,5 +1,7 @@
 import wave
 from io import BytesIO
+import base64
+import numpy as np
 
 
 async def tencent_silk_to_wav(silk_path: str, output_path: str) -> str:
@@ -50,3 +52,29 @@ async def wav_to_tencent_silk(wav_path: str, output_path: str) -> int:
         rate = wav.getframerate()
         duration = pilk.encode(wav_path, output_path, pcm_rate=rate, tencent=True)
         return duration
+
+
+
+
+"""
+将 Base64 编码的语音数据解码并存储为 WAV 文件。
+
+:param base64_data: Base64 编码的语音数据
+:param output_file: 输出的 WAV 文件路径
+:param sample_rate: 采样率（默认 16000 Hz）
+:param channels: 声道数（默认 1，单声道）
+:param sample_width: 采样宽度（默认 2，16 位）
+"""
+async def base64_to_wav(base64_data, output_file : str, sample_rate=16000, channels=1, sample_width=2):
+    # Base64 解码
+    audio_data = base64.b64decode(base64_data)
+
+    # 将解码后的数据转换为 numpy 数组（假设是 16 位 PCM 数据）
+    audio_array = np.frombuffer(audio_data, dtype=np.int16)
+
+    # 创建 WAV 文件
+    with wave.open(output_file, 'wb') as wav_file:
+        wav_file.setnchannels(channels)  # 设置声道数
+        wav_file.setsampwidth(sample_width)  # 设置采样宽度
+        wav_file.setframerate(sample_rate)  # 设置采样率
+        wav_file.writeframes(audio_array.tobytes())  # 写入音频数据
