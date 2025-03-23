@@ -1,4 +1,4 @@
-from defusedxml import ElementTree as ET
+from defusedxml import ElementTree as eT
 from astrbot.api import logger
 from astrbot.api.message_components import Emoji
 
@@ -9,7 +9,7 @@ class GeweDataPaser:
         self.is_private_chat = is_private_chat
 
     def _format_to_xml(self):
-        return ET.fromstring(self.data)
+        return eT.fromstring(self.data)
 
     def parse_emoji(self) -> Emoji | None:
         try:
