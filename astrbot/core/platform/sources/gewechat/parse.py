@@ -13,12 +13,12 @@ class GeweDataPaser:
 
     def parse_emoji(self) -> Emoji | None:
         try:
-            emoji_element = self._format_to_xml().find('.//emoji')
+            emoji_element = self._format_to_xml().find(".//emoji")
             # 提取 md5 和 len 属性
             if emoji_element is not None:
-                md5_value = emoji_element.get('md5')
-                emoji_size = emoji_element.get('len')
-                cdnurl = emoji_element.get('cdnurl')
+                md5_value = emoji_element.get("md5")
+                emoji_size = emoji_element.get("len")
+                cdnurl = emoji_element.get("cdnurl")
 
                 return Emoji(md5=md5_value, md5_len=emoji_size, cdnurl=cdnurl)
 

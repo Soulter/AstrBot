@@ -28,19 +28,19 @@ def get_wav_duration(file_path):
 
 class GewechatPlatformEvent(AstrMessageEvent):
     def __init__(
-            self,
-            message_str: str,
-            message_obj: AstrBotMessage,
-            platform_meta: PlatformMetadata,
-            session_id: str,
-            client: SimpleGewechatClient,
+        self,
+        message_str: str,
+        message_obj: AstrBotMessage,
+        platform_meta: PlatformMetadata,
+        session_id: str,
+        client: SimpleGewechatClient,
     ):
         super().__init__(message_str, message_obj, platform_meta, session_id)
         self.client = client
 
     @staticmethod
     async def send_with_client(
-            message: MessageChain, to_wxid: str, client: SimpleGewechatClient
+        message: MessageChain, to_wxid: str, client: SimpleGewechatClient
     ):
         if not to_wxid:
             logger.error("无法获取到 to_wxid。")
