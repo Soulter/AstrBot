@@ -27,3 +27,4 @@ wechatpy
 dingtalk-stream
 pilk
 numpy
+defusedxml
