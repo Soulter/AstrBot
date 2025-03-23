@@ -1,7 +1,5 @@
 import wave
 from io import BytesIO
-import base64
-import numpy as np
 
 
 async def tencent_silk_to_wav(silk_path: str, output_path: str) -> str:

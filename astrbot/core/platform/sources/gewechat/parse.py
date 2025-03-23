@@ -2,8 +2,6 @@ import xml.etree.ElementTree as ET
 from astrbot.api import logger, sp
 from astrbot.api.message_components import *
 
-from astrbot.core.message.components import BaseMessageComponent, Emoji
-
 
 class GeweDataPaser:
     def __init__(self, data, is_private_chat):
