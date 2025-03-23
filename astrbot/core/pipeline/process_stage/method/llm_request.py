@@ -231,8 +231,7 @@ class LLMRequestSubStage(Stage):
         if llm_response.role == "assistant":
             # 文本回复
             contexts = req.contexts
-            new_record = {"role": "user", "content": req.prompt}
-            contexts.append(new_record)
+            contexts.append(await req.assemble_context())
             contexts.append(
                 {"role": "assistant", "content": llm_response.completion_text}
             )
