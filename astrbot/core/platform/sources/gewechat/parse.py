@@ -1,5 +1,5 @@
 import xml.etree.ElementTree as ET
-from astrbot.api import logger, sp
+from astrbot.api import logger
 from astrbot.api.message_components import *
 
 
