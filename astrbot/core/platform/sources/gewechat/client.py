@@ -13,7 +13,6 @@ from astrbot.api import logger, sp
 from astrbot.api.message_components import Plain, Image, At, Record
 from astrbot.api.platform import AstrBotMessage, MessageMember, MessageType
 from astrbot.core.utils.io import download_image_by_url
-from astrbot.core.utils.tencent_record_helper import base64_to_wav
 from .downloader import GeweDownloader
 from .parse import GeweDataPaser
 
