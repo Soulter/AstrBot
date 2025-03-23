@@ -413,6 +413,8 @@ class Reply(BaseMessageComponent):
     """引用的消息发送时间"""
     message_str: T.Optional[str] = ""
     """解析后的纯文本消息字符串"""
+    sender_str: T.Optional[str] = ""
+    """被引用的消息纯文本"""
 
     text: T.Optional[str] = ""
     """deprecated"""

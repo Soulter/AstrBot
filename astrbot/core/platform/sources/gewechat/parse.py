@@ -1,6 +1,6 @@
 from defusedxml import ElementTree as eT
 from astrbot.api import logger
-from astrbot.api.message_components import Emoji
+from astrbot.api.message_components import Emoji, Reply
 
 
 class GeweDataPaser:
@@ -10,6 +10,15 @@ class GeweDataPaser:
 
     def _format_to_xml(self):
         return eT.fromstring(self.data)
+
+    def parse_mutil_49(self):
+        appmsg_type = self._format_to_xml().find(".//appmsg/type")
+        if appmsg_type is None:
+            return
+
+        match appmsg_type.text:
+            case "57":
+                return self.parse_replay()
 
     def parse_emoji(self) -> Emoji | None:
         try:
@@ -24,3 +33,44 @@ class GeweDataPaser:
 
         except Exception as e:
             logger.error(f"parse_emoji failed, {e}")
+
+    def parse_replay(self) -> Reply | None:
+        try:
+            replied_id = -1
+            replied_uid = 0
+            replied_nickname = ""
+            replied_content = ""
+            content = ""
+
+            root = self._format_to_xml()
+            refermsg = root.find(".//refermsg")
+            if refermsg is not None:
+                # 被引用的信息
+                svrid = refermsg.find('svrid')
+                fromusr = refermsg.find('fromusr')
+                displayname = refermsg.find('displayname')
+                refermsg_content = refermsg.find('content')
+                if svrid is not None:
+                    replied_id = svrid.text
+                if fromusr is not None:
+                    replied_uid = fromusr.text
+                if displayname is not None:
+                    replied_nickname = displayname.text
+                if refermsg_content is not None:
+                    replied_content = refermsg_content.text
+
+                # 提取引用者说的内容
+            title = root.find('.//appmsg/title')
+            if title is not None:
+                content = title.text
+
+            r = Reply(
+                id=replied_id,
+                sender_id=replied_uid,
+                sender_nickname=replied_nickname,
+                sender_str=replied_content,
+                message_str=content)
+            return r
+
+        except Exception as e:
+            logger.error(f"parse_replay failed, {e}")
