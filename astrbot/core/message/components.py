@@ -45,6 +45,7 @@ class ComponentType(Enum):
     Reply = "Reply"  # 回复
     Forward = "Forward"  # 转发消息
     File = "File"  # 文件
+    Emoji = "emoji"  # emoji表情包
 
     RPS = "RPS"  # TODO
     Dice = "Dice"  # TODO
@@ -559,6 +560,16 @@ class File(BaseMessageComponent):
         super().__init__(name=name, file=file)
 
 
+class Emoji(BaseMessageComponent):
+    type: ComponentType = "emoji"
+    md5: T.Optional[str] = ""
+    md5_len: T.Optional[int] = 0
+    cdnurl: T.Optional[str] = ""
+
+    def __init__(self, **_):
+        super().__init__(**_)
+
+
 ComponentTypes = {
     "plain": Plain,
     "text": Plain,
@@ -587,4 +598,5 @@ ComponentTypes = {
     "tts": TTS,
     "unknown": Unknown,
     "file": File,
+    "emoji": Emoji,
 }

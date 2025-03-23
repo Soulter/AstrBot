@@ -2,6 +2,8 @@ import wave
 import uuid
 import traceback
 import os
+
+from astrbot.core.message.components import Emoji
 from astrbot.core.utils.io import save_temp_img, download_file
 from astrbot.core.utils.tencent_record_helper import wav_to_tencent_silk
 from astrbot.api import logger
@@ -114,6 +116,8 @@ class GewechatPlatformEvent(AstrMessageEvent):
                 file_url = f"{client.file_server_url}/{file_id}"
                 logger.debug(f"gewe callback file url: {file_url}")
                 await client.post_file(to_wxid, file_url, file_id)
+            elif isinstance(comp, Emoji):
+                await client.post_emoji(to_wxid, comp.md5, comp.md5_len, comp.cdnurl)
             elif isinstance(comp, At):
                 pass
             else:
