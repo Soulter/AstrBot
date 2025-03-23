@@ -562,9 +562,9 @@ class File(BaseMessageComponent):
 
 class Emoji(BaseMessageComponent):
     type: ComponentType = "emoji"
-    # file_url: T.Optional[str] = ""
     md5: T.Optional[str] = ""
     md5_len: T.Optional[int] = 0
+    cdnurl: T.Optional[str] = ""
 
     def __init__(self, **_):
         super().__init__(**_)

@@ -2,6 +2,8 @@ import wave
 import uuid
 import traceback
 import os
+
+from astrbot.core.message.components import Emoji
 from astrbot.core.utils.io import save_temp_img, download_file
 from astrbot.core.utils.tencent_record_helper import wav_to_tencent_silk
 from astrbot.api import logger
@@ -26,19 +28,19 @@ def get_wav_duration(file_path):
 
 class GewechatPlatformEvent(AstrMessageEvent):
     def __init__(
-        self,
-        message_str: str,
-        message_obj: AstrBotMessage,
-        platform_meta: PlatformMetadata,
-        session_id: str,
-        client: SimpleGewechatClient,
+            self,
+            message_str: str,
+            message_obj: AstrBotMessage,
+            platform_meta: PlatformMetadata,
+            session_id: str,
+            client: SimpleGewechatClient,
     ):
         super().__init__(message_str, message_obj, platform_meta, session_id)
         self.client = client
 
     @staticmethod
     async def send_with_client(
-        message: MessageChain, to_wxid: str, client: SimpleGewechatClient
+            message: MessageChain, to_wxid: str, client: SimpleGewechatClient
     ):
         if not to_wxid:
             logger.error("无法获取到 to_wxid。")
@@ -114,6 +116,8 @@ class GewechatPlatformEvent(AstrMessageEvent):
                 file_url = f"{client.file_server_url}/{file_id}"
                 logger.debug(f"gewe callback file url: {file_url}")
                 await client.post_file(to_wxid, file_url, file_id)
+            elif isinstance(comp, Emoji):
+                await client.post_emoji(to_wxid, comp.md5, comp.md5_len, comp.cdnurl)
             elif isinstance(comp, At):
                 pass
             else:

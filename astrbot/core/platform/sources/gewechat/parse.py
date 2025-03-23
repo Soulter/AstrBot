@@ -20,8 +20,9 @@ class GeweDataPaser:
             if emoji_element is not None:
                 md5_value = emoji_element.get('md5')
                 emoji_size = emoji_element.get('len')
+                cdnurl = emoji_element.get('cdnurl')
 
-                return Emoji(md5=md5_value, md5_len=emoji_size)
+                return Emoji(md5=md5_value, md5_len=emoji_size, cdnurl=cdnurl)
 
         except Exception as e:
             logger.error(f"parse_emoji failed, {e}")
