@@ -38,7 +38,6 @@ class GeweDataPaser:
         try:
             return Video(file="", cover=self.data)
 
-
         except Exception as e:
             logger.error(f"parse_emoji failed, {e}")
 

@@ -10,7 +10,7 @@ import anyio
 import quart
 
 from astrbot.api import logger, sp
-from astrbot.api.message_components import Plain, Image, At, Record
+from astrbot.api.message_components import Plain, Image, At, Record, Video
 from astrbot.api.platform import AstrBotMessage, MessageMember, MessageType
 from astrbot.core.utils.io import download_image_by_url
 from .downloader import GeweDownloader
@@ -551,6 +551,25 @@ class SimpleGewechatClient:
             ) as resp:
                 json_blob = await resp.json()
                 logger.debug(f"发送视频结果: {json_blob}")
+
+    async def forward_video(self, to_wxid, cnd_xml: str):
+        """转发视频
+
+            Args:
+                to_wxid (str): 发送给谁
+                cnd_xml (str): 视频消息的cdn信息
+        """
+        payload = {
+            "appId": self.appid,
+            "toWxid": to_wxid,
+            "xml": cnd_xml,
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                    f"{self.base_url}/message/forwardVideo", headers=self.headers, json=payload
+            ) as resp:
+                json_blob = await resp.json()
+                logger.debug(f"转发视频结果: {json_blob}")
 
     async def post_voice(self, to_wxid, voice_url: str, voice_duration: int):
         """发送语音信息
