@@ -829,6 +829,7 @@ CONFIG_METADATA_2 = {
                             "temperature": {"description": "温度", "type": "float"},
                             "top_p": {"description": "Top P值", "type": "float"},
                         },
+                        "editable": True,
                     },
                     "dify_api_key": {
                         "description": "API Key",
