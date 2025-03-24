@@ -1,6 +1,6 @@
 from defusedxml import ElementTree as eT
 from astrbot.api import logger
-from astrbot.api.message_components import Emoji, Reply
+from astrbot.api.message_components import Emoji, Reply, Video
 
 
 class GeweDataPaser:
@@ -30,6 +30,14 @@ class GeweDataPaser:
                 cdnurl = emoji_element.get("cdnurl")
 
                 return Emoji(md5=md5_value, md5_len=emoji_size, cdnurl=cdnurl)
+
+        except Exception as e:
+            logger.error(f"parse_emoji failed, {e}")
+
+    def parse_video(self) -> Video | None:
+        try:
+            return Video(file="", cover=self.data)
+
 
         except Exception as e:
             logger.error(f"parse_emoji failed, {e}")

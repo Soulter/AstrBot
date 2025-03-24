@@ -237,6 +237,8 @@ class SimpleGewechatClient:
             case 42:  # 名片
                 logger.info("消息类型(42)：名片")
             case 43:  # 视频
+                video = data_parser.parse_video()
+                abm.message.append(video)
                 logger.info("消息类型(43)：视频")
             case 47:  # emoji
                 emoji = data_parser.parse_emoji()
