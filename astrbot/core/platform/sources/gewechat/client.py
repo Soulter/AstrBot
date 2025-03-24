@@ -25,12 +25,12 @@ class SimpleGewechatClient:
     """
 
     def __init__(
-        self,
-        base_url: str,
-        nickname: str,
-        host: str,
-        port: int,
-        event_queue: asyncio.Queue,
+            self,
+            base_url: str,
+            nickname: str,
+            host: str,
+            port: int,
+            event_queue: asyncio.Queue,
     ):
         self.base_url = base_url
         if self.base_url.endswith("/"):
@@ -148,8 +148,8 @@ class SimpleGewechatClient:
             # at
             msg_source = d["MsgSource"]
             if (
-                f"<atuserlist><![CDATA[,{abm.self_id}]]>" in msg_source
-                or f"<atuserlist><![CDATA[{abm.self_id}]]>" in msg_source
+                    f"<atuserlist><![CDATA[,{abm.self_id}]]>" in msg_source
+                    or f"<atuserlist><![CDATA[{abm.self_id}]]>" in msg_source
             ):
                 at_me = True
             if "在群聊中@了你" in d.get("PushContent", ""):
@@ -171,8 +171,8 @@ class SimpleGewechatClient:
         user_real_name = "unknown"
         if abm.group_id:
             if (
-                abm.group_id not in self.userrealnames
-                or user_id not in self.userrealnames[abm.group_id]
+                    abm.group_id not in self.userrealnames
+                    or user_id not in self.userrealnames[abm.group_id]
             ):
                 # 获取群成员列表，并且缓存
                 if abm.group_id not in self.userrealnames:
@@ -295,9 +295,9 @@ class SimpleGewechatClient:
         await asyncio.sleep(3)
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/tools/setCallback",
-                headers=self.headers,
-                json={"token": self.token, "callbackUrl": self.callback_url},
+                    f"{self.base_url}/tools/setCallback",
+                    headers=self.headers,
+                    json={"token": self.token, "callbackUrl": self.callback_url},
             ) as resp:
                 json_blob = await resp.json()
                 logger.info(f"设置回调结果: {json_blob}")
@@ -315,9 +315,9 @@ class SimpleGewechatClient:
         """检查 APPID 对应的设备是否在线。"""
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/login/checkOnline",
-                headers=self.headers,
-                json={"appId": appid},
+                    f"{self.base_url}/login/checkOnline",
+                    headers=self.headers,
+                    json={"appId": appid},
             ) as resp:
                 json_blob = await resp.json()
                 return json_blob["data"]
@@ -329,9 +329,9 @@ class SimpleGewechatClient:
             if online:
                 async with aiohttp.ClientSession() as session:
                     async with session.post(
-                        f"{self.base_url}/login/logout",
-                        headers=self.headers,
-                        json={"appId": self.appid},
+                            f"{self.base_url}/login/logout",
+                            headers=self.headers,
+                            json={"appId": self.appid},
                     ) as resp:
                         json_blob = await resp.json()
                         logger.info(f"登出结果: {json_blob}")
@@ -364,9 +364,9 @@ class SimpleGewechatClient:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{self.base_url}/login/getLoginQrCode",
-                    headers=self.headers,
-                    json=payload,
+                        f"{self.base_url}/login/getLoginQrCode",
+                        headers=self.headers,
+                        json=payload,
                 ) as resp:
                     json_blob = await resp.json()
                     if json_blob["ret"] != 200:
@@ -415,9 +415,9 @@ class SimpleGewechatClient:
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{self.base_url}/login/checkLogin",
-                    headers=self.headers,
-                    json=payload,
+                        f"{self.base_url}/login/checkLogin",
+                        headers=self.headers,
+                        json=payload,
                 ) as resp:
                     json_blob = await resp.json()
                     logger.info(f"检查登录状态: {json_blob}")
@@ -465,9 +465,9 @@ class SimpleGewechatClient:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/group/getChatroomMemberList",
-                headers=self.headers,
-                json=payload,
+                    f"{self.base_url}/group/getChatroomMemberList",
+                    headers=self.headers,
+                    json=payload,
             ) as resp:
                 json_blob = await resp.json()
                 return json_blob["data"]
@@ -484,7 +484,7 @@ class SimpleGewechatClient:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/message/postText", headers=self.headers, json=payload
+                    f"{self.base_url}/message/postText", headers=self.headers, json=payload
             ) as resp:
                 json_blob = await resp.json()
                 logger.debug(f"发送消息结果: {json_blob}")
@@ -499,7 +499,7 @@ class SimpleGewechatClient:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/message/postImage", headers=self.headers, json=payload
+                    f"{self.base_url}/message/postImage", headers=self.headers, json=payload
             ) as resp:
                 json_blob = await resp.json()
                 logger.debug(f"发送图片结果: {json_blob}")
@@ -518,9 +518,9 @@ class SimpleGewechatClient:
             if emoji_md5 != "" and emoji_size != "":
                 async with aiohttp.ClientSession() as session:
                     async with session.post(
-                        f"{self.base_url}/message/postEmoji",
-                        headers=self.headers,
-                        json=payload,
+                            f"{self.base_url}/message/postEmoji",
+                            headers=self.headers,
+                            json=payload,
                     ) as resp:
                         json_blob = await resp.json()
                         logger.info(
@@ -531,6 +531,23 @@ class SimpleGewechatClient:
 
         except Exception as e:
             logger.error(e)
+
+    async def post_video(
+            self, to_wxid, video_url: str, thumb_url: str, video_duration: int
+    ):
+        payload = {
+            "appId": self.appid,
+            "toWxid": to_wxid,
+            "videoUrl": video_url,
+            "thumbUrl": thumb_url,
+            "videoDuration": video_duration,
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                    f"{self.base_url}/message/postVideo", headers=self.headers, json=payload
+            ) as resp:
+                json_blob = await resp.json()
+                logger.debug(f"发送视频结果: {json_blob}")
 
     async def post_voice(self, to_wxid, voice_url: str, voice_duration: int):
         """发送语音信息
@@ -550,7 +567,7 @@ class SimpleGewechatClient:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/message/postVoice", headers=self.headers, json=payload
+                    f"{self.base_url}/message/postVoice", headers=self.headers, json=payload
             ) as resp:
                 json_blob = await resp.json()
                 logger.info(f"发送语音结果: {json_blob.get('msg', '操作失败')}")
@@ -572,7 +589,7 @@ class SimpleGewechatClient:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/message/postFile", headers=self.headers, json=payload
+                    f"{self.base_url}/message/postFile", headers=self.headers, json=payload
             ) as resp:
                 json_blob = await resp.json()
                 logger.debug(f"发送文件结果: {json_blob}")
@@ -590,9 +607,9 @@ class SimpleGewechatClient:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/contacts/addContacts",
-                headers=self.headers,
-                json=payload,
+                    f"{self.base_url}/contacts/addContacts",
+                    headers=self.headers,
+                    json=payload,
             ) as resp:
                 json_blob = await resp.json()
                 logger.debug(f"申请添加好友结果: {json_blob}")
@@ -606,9 +623,9 @@ class SimpleGewechatClient:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/group/getChatroomInfo",
-                headers=self.headers,
-                json=payload,
+                    f"{self.base_url}/group/getChatroomInfo",
+                    headers=self.headers,
+                    json=payload,
             ) as resp:
                 json_blob = await resp.json()
                 logger.debug(f"获取群信息结果: {json_blob}")
@@ -622,9 +639,9 @@ class SimpleGewechatClient:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/group/getChatroomMemberList",
-                headers=self.headers,
-                json=payload,
+                    f"{self.base_url}/group/getChatroomMemberList",
+                    headers=self.headers,
+                    json=payload,
             ) as resp:
                 json_blob = await resp.json()
                 logger.debug(f"获取群信息结果: {json_blob}")
@@ -636,16 +653,16 @@ class SimpleGewechatClient:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/group/agreeJoinRoom",
-                headers=self.headers,
-                json=payload,
+                    f"{self.base_url}/group/agreeJoinRoom",
+                    headers=self.headers,
+                    json=payload,
             ) as resp:
                 json_blob = await resp.json()
                 logger.debug(f"获取群信息结果: {json_blob}")
                 return json_blob
 
     async def add_group_member_to_friend(
-        self, group_id: str, to_wxid: str, content: str
+            self, group_id: str, to_wxid: str, content: str
     ):
         payload = {
             "appId": self.appid,
@@ -656,9 +673,9 @@ class SimpleGewechatClient:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/group/addGroupMemberAsFriend",
-                headers=self.headers,
-                json=payload,
+                    f"{self.base_url}/group/addGroupMemberAsFriend",
+                    headers=self.headers,
+                    json=payload,
             ) as resp:
                 json_blob = await resp.json()
                 logger.debug(f"获取群信息结果: {json_blob}")
@@ -680,9 +697,9 @@ class SimpleGewechatClient:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/contacts/getDetailInfo",
-                headers=self.headers,
-                json=payload,
+                    f"{self.base_url}/contacts/getDetailInfo",
+                    headers=self.headers,
+                    json=payload,
             ) as resp:
                 json_blob = await resp.json()
                 logger.debug(f"获取群信息结果: {json_blob}")

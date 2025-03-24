@@ -9,7 +9,7 @@ from astrbot.core.utils.tencent_record_helper import wav_to_tencent_silk
 from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, MessageChain
 from astrbot.api.platform import AstrBotMessage, PlatformMetadata, Group, MessageMember
-from astrbot.api.message_components import Plain, Image, Record, At, File
+from astrbot.api.message_components import Plain, Image, Record, At, File, Video
 from .client import SimpleGewechatClient
 
 
@@ -28,19 +28,19 @@ def get_wav_duration(file_path):
 
 class GewechatPlatformEvent(AstrMessageEvent):
     def __init__(
-        self,
-        message_str: str,
-        message_obj: AstrBotMessage,
-        platform_meta: PlatformMetadata,
-        session_id: str,
-        client: SimpleGewechatClient,
+            self,
+            message_str: str,
+            message_obj: AstrBotMessage,
+            platform_meta: PlatformMetadata,
+            session_id: str,
+            client: SimpleGewechatClient,
     ):
         super().__init__(message_str, message_obj, platform_meta, session_id)
         self.client = client
 
     @staticmethod
     async def send_with_client(
-        message: MessageChain, to_wxid: str, client: SimpleGewechatClient
+            message: MessageChain, to_wxid: str, client: SimpleGewechatClient
     ):
         if not to_wxid:
             logger.error("无法获取到 to_wxid。")
@@ -84,6 +84,56 @@ class GewechatPlatformEvent(AstrMessageEvent):
                 img_url = f"{client.file_server_url}/{file_id}"
                 logger.debug(f"gewe callback img url: {img_url}")
                 await client.post_image(to_wxid, img_url)
+            elif isinstance(comp, Video):
+                try:
+                    from pyffmpeg import FFmpeg
+                except (ImportError, ModuleNotFoundError):
+                    logger.error(
+                        "需要安装 pyffmpeg 库才能发送视频: pip install pyffmpeg"
+                    )
+                    raise ModuleNotFoundError(
+                        "需要安装 pyffmpeg 库才能发送视频: pip install pyffmpeg"
+                    )
+
+                video_url = comp.file
+                # 根据 url 下载视频
+                video_filename = f"{uuid.uuid4()}.mp4"
+                video_path = f"data/temp/{video_filename}"
+                await download_file(video_url, video_path)
+
+                # 获取视频第一帧
+                thumb_path = f"data/temp/{uuid.uuid4()}.jpg"
+                try:
+                    ff = FFmpeg()
+                    command = f'-i "{video_path}" -ss 0 -vframes 1 "{thumb_path}"'
+                    ff.options(command)
+                    thumb_file_id = os.path.basename(thumb_path)
+                    thumb_url = f"{client.file_server_url}/{thumb_file_id}"
+                except Exception as e:
+                    logger.error(f"获取视频第一帧失败: {e}")
+                # 获取视频时长
+                try:
+                    from pyffmpeg import FFprobe
+
+                    # 创建 FFprobe 实例
+                    ffprobe = FFprobe(video_url)
+                    # 获取时长字符串
+                    duration_str = ffprobe.duration
+                    # 处理时长字符串
+                    video_duration = float(duration_str.replace(":", ""))
+                except Exception as e:
+                    logger.error(f"获取时长失败: {e}")
+                    video_duration = 10
+
+                file_id = os.path.basename(video_path)
+                video_url = f"{client.file_server_url}/{file_id}"
+                await client.post_video(to_wxid, video_url, thumb_url, video_duration)
+
+                # 删除临时视频和缩略图文件
+                if os.path.exists(video_path):
+                    os.remove(video_path)
+                if os.path.exists(thumb_path):
+                    os.remove(thumb_path)
             elif isinstance(comp, Record):
                 # 默认已经存在 data/temp 中
                 record_url = comp.file

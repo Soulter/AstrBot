@@ -1,17 +1,17 @@
 <template>
-  <v-card elevation="1" class="stat-card platform-card">
+  <v-card elevation="1" class="stat-card uptime-card">
     <v-card-text>
       <div class="d-flex align-start">
         <div class="icon-wrapper">
-          <v-icon icon="mdi-server-network" size="24"></v-icon>
+          <v-icon icon="mdi-clock-outline" size="24"></v-icon>
         </div>
         
         <div class="stat-content">
-          <div class="stat-title">消息平台</div>
+          <div class="stat-title">运行时间</div>
           <div class="stat-value-wrapper">
-            <h2 class="stat-value">{{ stat.platform_count || 0 }}</h2>
+            <h2 class="stat-value">{{ formattedTime }}</h2>
           </div>
-          <div class="stat-subtitle">已连接的消息平台数量</div>
+          <div class="stat-subtitle">AstrBot 运行时间</div>
         </div>
       </div>
     </v-card-text>
@@ -20,14 +20,20 @@
 
 <script>
 export default {
-  name: 'OnlinePlatform',
-  props: ['stat']
+  name: 'RunningTime',
+  props: ['stat'],
+  computed: {
+    formattedTime() {
+      return this.stat?.running || '加载中...';
+    }
+  }
 };
 </script>
 
 <style scoped>
 .stat-card {
   height: 100%;
+  border-radius: 8px;
   transition: transform 0.2s, box-shadow 0.2s;
   overflow: hidden;
 }
@@ -37,8 +43,8 @@ export default {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
 }
 
-.platform-card {
-  background-color: #2196f3;
+.uptime-card {
+  background-color: #4caf50;
   color: white;
 }
 
@@ -71,14 +77,13 @@ export default {
 }
 
 .stat-value {
-  font-size: 32px;
+  font-size: 24px;
   font-weight: 600;
   line-height: 1.2;
-  margin-right: 8px;
 }
 
 .stat-subtitle {
-  font-size: 12px;
-  opacity: 0.7;
-}
+    font-size: 12px;
+    opacity: 0.7;
+  }
 </style>

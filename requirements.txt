@@ -25,6 +25,11 @@ dashscope
 python-telegram-bot
 wechatpy
 dingtalk-stream
+<<<<<<< HEAD
 pilk
 numpy
 defusedxml
+=======
+mcp
+certifi
+>>>>>>> 6c8d85110954896f1fee7d8e668b10da67bfed96
