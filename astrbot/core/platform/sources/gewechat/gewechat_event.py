@@ -28,19 +28,19 @@ def get_wav_duration(file_path):
 
 class GewechatPlatformEvent(AstrMessageEvent):
     def __init__(
-            self,
-            message_str: str,
-            message_obj: AstrBotMessage,
-            platform_meta: PlatformMetadata,
-            session_id: str,
-            client: SimpleGewechatClient,
+        self,
+        message_str: str,
+        message_obj: AstrBotMessage,
+        platform_meta: PlatformMetadata,
+        session_id: str,
+        client: SimpleGewechatClient,
     ):
         super().__init__(message_str, message_obj, platform_meta, session_id)
         self.client = client
 
     @staticmethod
     async def send_with_client(
-            message: MessageChain, to_wxid: str, client: SimpleGewechatClient
+        message: MessageChain, to_wxid: str, client: SimpleGewechatClient
     ):
         if not to_wxid:
             logger.error("无法获取到 to_wxid。")
@@ -130,7 +130,9 @@ class GewechatPlatformEvent(AstrMessageEvent):
 
                     file_id = os.path.basename(video_path)
                     video_url = f"{client.file_server_url}/{file_id}"
-                    await client.post_video(to_wxid, video_url, thumb_url, video_duration)
+                    await client.post_video(
+                        to_wxid, video_url, thumb_url, video_duration
+                    )
 
                     # 删除临时视频和缩略图文件
                     if os.path.exists(video_path):

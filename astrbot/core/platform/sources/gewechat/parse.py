@@ -53,10 +53,10 @@ class GeweDataPaser:
             refermsg = root.find(".//refermsg")
             if refermsg is not None:
                 # 被引用的信息
-                svrid = refermsg.find('svrid')
-                fromusr = refermsg.find('fromusr')
-                displayname = refermsg.find('displayname')
-                refermsg_content = refermsg.find('content')
+                svrid = refermsg.find("svrid")
+                fromusr = refermsg.find("fromusr")
+                displayname = refermsg.find("displayname")
+                refermsg_content = refermsg.find("content")
                 if svrid is not None:
                     replied_id = svrid.text
                 if fromusr is not None:
@@ -67,7 +67,7 @@ class GeweDataPaser:
                     replied_content = refermsg_content.text
 
                 # 提取引用者说的内容
-            title = root.find('.//appmsg/title')
+            title = root.find(".//appmsg/title")
             if title is not None:
                 content = title.text
 
@@ -76,7 +76,8 @@ class GeweDataPaser:
                 sender_id=replied_uid,
                 sender_nickname=replied_nickname,
                 sender_str=replied_content,
-                message_str=content)
+                message_str=content,
+            )
             return r
 
         except Exception as e:
