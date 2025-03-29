@@ -12,3 +12,6 @@ class PlatformMetadata:
     """平台的默认配置模板"""
     adapter_display_name: str = None
     """显示在 WebUI 配置页中的平台名称，如空则是 name"""
+
+    id: str = None
+    """平台 ID"""

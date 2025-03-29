@@ -41,6 +41,7 @@ class AiocqhttpAdapter(Platform):
         self.metadata = PlatformMetadata(
             "aiocqhttp",
             "适用于 OneBot 标准的消息平台适配器，支持反向 WebSockets。",
+            id=platform_config["id"],
         )
 
         self.bot = CQHttp(

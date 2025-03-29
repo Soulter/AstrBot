@@ -82,6 +82,7 @@ class TelegramPlatformAdapter(Platform):
         return PlatformMetadata(
             "telegram",
             "telegram 适配器",
+            id=self.config["id"],
         )
 
     @override

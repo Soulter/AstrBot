@@ -42,10 +42,7 @@ class WebChatAdapter(Platform):
         self.unique_session = platform_settings["unique_session"]
         self.imgs_dir = "data/webchat/imgs"
 
-        self.metadata = PlatformMetadata(
-            "webchat",
-            "webchat",
-        )
+        self.metadata = PlatformMetadata("webchat", "webchat", id="webchat")
 
     async def send_by_session(
         self, session: MessageSesion, message_chain: MessageChain

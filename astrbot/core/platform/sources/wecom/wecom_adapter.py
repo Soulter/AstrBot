@@ -146,10 +146,7 @@ class WecomPlatformAdapter(Platform):
 
     @override
     def meta(self) -> PlatformMetadata:
-        return PlatformMetadata(
-            "wecom",
-            "wecom 适配器",
-        )
+        return PlatformMetadata("wecom", "wecom 适配器", id=self.config["id"])
 
     @override
     async def run(self):
