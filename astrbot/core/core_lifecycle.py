@@ -133,6 +133,23 @@ class AstrBotCoreLifecycle:
         for task in self.curr_tasks:
             task.cancel()
 
+        for plugin in self.star_context.get_all_stars():
+            try:
+                if not plugin.activated:
+                    return
+
+                if hasattr(plugin.star_cls, "__del__"):
+                    asyncio.get_event_loop().run_in_executor(
+                        None, plugin.star_cls.__del__
+                    )
+                else:
+                    await plugin.star_cls.terminate()
+            except Exception as e:
+                logger.warning(traceback.format_exc())
+                logger.warning(
+                    f"插件 {plugin.name} 未被正常终止 {e!s}, 可能会导致资源泄露等问题。"
+                )
+
         await self.provider_manager.terminate()
         await self.platform_manager.terminate()
         self.dashboard_shutdown_event.set()
